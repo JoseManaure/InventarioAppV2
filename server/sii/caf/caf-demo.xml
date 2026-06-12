@@ -1,0 +1,27 @@
+<CAF version="1.0">
+  <DA>
+    <RE>76111111-1</RE>
+
+    <RS>EMPRESA DEMO SPA</RS>
+
+    <TD>39</TD>
+
+    <RNG>
+      <D>1</D>
+      <H>1000</H>
+    </RNG>
+
+    <FA>2026-01-01</FA>
+
+    <RSAPK>
+      <M>MODULOFAKE123456</M>
+      <E>Aw==</E>
+    </RSAPK>
+
+    <IDK>100</IDK>
+  </DA>
+
+  <FRMA algoritmo="SHA1withRSA">
+    FIRMAFAKE123456
+  </FRMA>
+</CAF>
