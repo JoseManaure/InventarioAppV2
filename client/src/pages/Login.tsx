@@ -13,24 +13,54 @@ export default function Login({ onLogin }: LoginProps) {
   const [password, setPassword] = useState('');
 
   const login = async () => {
-  try {
-    console.log('🟡 Enviando login:', { email, password });
+    try {
 
-    const res = await api.post('/auth/login', { email, password });
+      console.log('🟡 Enviando login:', {
+        email,
+        password
+      });
 
-    console.log('🟢 Login exitoso:', res.data);
-    
-    localStorage.setItem('token', res.data.token); // ✅ Guarda el token
+      const res = await api.post(
+        "/auth/login",
+        {
+          email,
+          password
+        }
+      );
 
-    setAuthToken(res.data.token);
-    onLogin(res.data.user);
-    window.location.href = "/dashboard";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (err: any) {
-    console.error('🔴 Error en login:', err.response?.data || err.message);
-    alert('Credenciales inválidas');
-  }
-};
+      localStorage.setItem(
+        "token",
+        res.data.token
+      );
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify(res.data.user)
+      );
+
+      setAuthToken(
+        res.data.token
+      );
+
+      onLogin(
+        res.data.user
+      );
+
+      window.location.href =
+        "/dashboard-ventas";
+
+    } catch (err: any) {
+
+      console.error(
+        '🔴 Error en login:',
+        err.response?.data || err.message
+      );
+
+      alert(
+        'Credenciales inválidas'
+      );
+    }
+  };
 
   return (
     <div style={{ padding: 50 }}>

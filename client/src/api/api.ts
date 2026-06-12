@@ -1,8 +1,13 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "/api",
+  baseURL: "http://localhost:5001/api",
+  withCredentials: true,
 });
+
+export const deleteCotizacion = async (id: string) => {
+  return await api.delete(`/cotizaciones/${id}`);
+};
 
 export const setAuthToken = (token: string | null) => {
   if (token) {

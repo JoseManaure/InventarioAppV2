@@ -150,85 +150,85 @@ export default function InventarioVista() {
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white border border-gray-300 shadow-md rounded-lg">
           <thead className="bg-gray-100 text-gray-700">
-            <tr>
-              <th className="py-3 px-4 text-left cursor-pointer" onClick={() => handleSort('nombre')}>Código</th>
-              <th className="py-3 px-4 text-left">Detalle Producto</th>
-              <th className="py-3 px-4 text-center cursor-pointer" onClick={() => handleSort('cantidad')}>Stock</th>
-              <th className="py-3 px-4 text-center">Reservados</th>
-              <th className="py-3 px-4 text-center">Disponibles</th>
-              <th className="py-3 px-4 text-center cursor-pointer" onClick={() => handleSort('precio')}>Precio Local</th>
-              <th className="py-3 px-4 text-center cursor-pointer" onClick={() => handleSort('costo')}>Costo</th> {/* 🔹 nueva columna */}
-              <th className="py-3 px-4 text-center">Acción</th>
-            </tr>
+            <tr>{[
+              <th key="c1" className="py-3 px-4 text-left cursor-pointer" onClick={() => handleSort('nombre')}>Código</th>,
+              <th key="c2" className="py-3 px-4 text-left">Detalle Producto</th>,
+              <th key="c3" className="py-3 px-4 text-center cursor-pointer" onClick={() => handleSort('cantidad')}>Stock</th>,
+              <th key="c4" className="py-3 px-4 text-center">Reservados</th>,
+              <th key="c5" className="py-3 px-4 text-center">Disponibles</th>,
+              <th key="c6" className="py-3 px-4 text-center cursor-pointer" onClick={() => handleSort('precio')}>Precio Local</th>,
+              <th key="c7" className="py-3 px-4 text-center cursor-pointer" onClick={() => handleSort('costo')}>Costo</th>,
+              <th key="c8" className="py-3 px-4 text-center">Acción</th>
+            ]}</tr>
           </thead>
-        <tbody>
-  {filteredItems.map(item => {
-    const totalComprometidos = item.comprometidos?.reduce((acc, c) => acc + (c.cantidad || 0), 0) || 0;
-    const cantidadDisponible = (item.cantidad || 0) - totalComprometidos;
-    const precioLocal = Number(item.precio || 0);
-    const costoLocal = Number(item.costo || 0);
-    const resultados = preciosCM[item._id];
+          <tbody>
+            {filteredItems.map(item => {
+              const totalComprometidos = item.comprometidos?.reduce((acc, c) => acc + (c.cantidad || 0), 0) || 0;
+              const cantidadDisponible = (item.cantidad || 0) - totalComprometidos;
+              const precioLocal = Number(item.precio || 0);
+              const costoLocal = Number(item.costo || 0);
+              const resultados = preciosCM[item._id];
 
-    return (
-      <>
-        <tr key={item._id} className="border-t border-gray-200 hover:bg-gray-50">
-          <td className="py-3 px-4">{item.codigo || '—'}</td>
-          <td className="py-3 px-4">{item.nombre || '—'}</td>
-          <td className="py-3 px-4 text-center">{item.cantidad ?? 0}</td>
-          <td className="py-3 px-4 text-center">
-            {totalComprometidos > 0
-              ? <span className="text-red-600 font-semibold">{totalComprometidos}</span>
-              : <span className="text-gray-400">—</span>}
-          </td>
-          <td className="py-3 px-4 text-center">{cantidadDisponible}</td>
-          <td className="py-3 px-4 text-center">{formatPrice(precioLocal)}</td>
-          <td className="py-3 px-4 text-center">{formatPrice(costoLocal)}</td>
-          <td className="py-3 px-4 text-center">
-            <button
-              onClick={() => compararPrecioConstrumart(item)}
-              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-2 rounded"
-            >
-              {cargandoCM[item._id] ? 'Buscando...' : 'Comparar'}
-            </button>
-          </td>
-        </tr>
+              return (
+                <>
+                  <tr key={item._id} className="border-t border-gray-200 hover:bg-gray-50">
+                    <td className="py-3 px-4">{item.codigo || '—'}</td>
+                    <td className="py-3 px-4">{item.nombre || '—'}</td>
+                    <td className="py-3 px-4 text-center">{item.cantidad ?? 0}</td>
+                    <td className="py-3 px-4 text-center">
+                      {totalComprometidos > 0
+                        ? <span className="text-red-600 font-semibold">{totalComprometidos}</span>
+                        : <span className="text-gray-400">—</span>}
+                    </td>
+                    <td className="py-3 px-4 text-center">{cantidadDisponible}</td>
+                    <td className="py-3 px-4 text-center">{formatPrice(precioLocal)}</td>
+                    <td className="py-3 px-4 text-center">{formatPrice(costoLocal)}</td>
+                    <td className="py-3 px-4 text-center">
+                      <button
+                        onClick={() => compararPrecioConstrumart(item)}
+                        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-2 rounded"
+                      >
+                        {cargandoCM[item._id] ? 'Buscando...' : 'Comparar'}
+                      </button>
+                    </td>
+                  </tr>
 
-        {resultados && resultados.length > 0 && (
-          <tr key={item._id + '-cm'}>
-            <td colSpan={8} className="bg-gray-50 p-2">
-              <strong>Precios Construmart (Top 3):</strong>
-              <ul className="mt-1 space-y-1">
-                {resultados.map((r, i) => {
-                  const esMasBarato = r.precio < precioLocal;
-                  const diferencia = precioLocal - r.precio;
-                  return (
-                    <li key={i} className="flex justify-between items-center">
-                      <a href={r.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
-                        {r.nombre}
-                      </a>
-                      <span className={`${esMasBarato ? 'text-red-600 font-bold' : 'text-green-600 font-bold'}`}>
-                        {formatPrice(r.precio)} {esMasBarato
-                          ? ` 🔻 Más barato en CM (ahorras ${formatPrice(Math.abs(diferencia))})`
-                          : ` ✅ Tu precio es mejor (ahorras ${formatPrice(Math.abs(diferencia))})`}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </td>
-          </tr>
-        )}
-      </>
-    );
-  })}
-  {filteredItems.length === 0 && !loading && (
-    <tr>
-      <td colSpan={8} className="text-center py-6 text-gray-500">
-        No se encontraron productos, agrégalos con facturas de compra.
-      </td>
-    </tr>
-  )}
-</tbody>
+                  {resultados && resultados.length > 0 && (
+                    <tr key={item._id + '-cm'}>
+                      <td colSpan={8} className="bg-gray-50 p-2">
+                        <strong>Precios Construmart (Top 3):</strong>
+                        <ul className="mt-1 space-y-1">
+                          {resultados.map((r, i) => {
+                            const esMasBarato = r.precio < precioLocal;
+                            const diferencia = precioLocal - r.precio;
+                            return (
+                              <li key={i} className="flex justify-between items-center">
+                                <a href={r.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                                  {r.nombre}
+                                </a>
+                                <span className={`${esMasBarato ? 'text-red-600 font-bold' : 'text-green-600 font-bold'}`}>
+                                  {formatPrice(r.precio)} {esMasBarato
+                                    ? ` 🔻 Más barato en CM (ahorras ${formatPrice(Math.abs(diferencia))})`
+                                    : ` ✅ Tu precio es mejor (ahorras ${formatPrice(Math.abs(diferencia))})`}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              );
+            })}
+            {filteredItems.length === 0 && !loading && (
+              <tr>
+                <td colSpan={8} className="text-center py-6 text-gray-500">
+                  No se encontraron productos, agrégalos con facturas de compra.
+                </td>
+              </tr>
+            )}
+          </tbody>
 
         </table>
 

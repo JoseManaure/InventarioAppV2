@@ -1,17 +1,18 @@
 import { useState } from 'react';
-import { FileText } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { generarGuiaPDF } from '../utils/pdf';
 import api from '../api/api';
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+
 import BuscadorProductos from '../components/BuscadorProductos';
 import FormularioCliente from '../components/FormularioCliente';
-import AccionesCotizacion from '../components/AccionesCotizacion';
-import ResumenTablaProductos from '../components/ResumenTablaProductos';
-
 import { useCotizacion } from '../hooks/useCotizacion';
-import type { ProductoResumen } from '../hooks/useCotizacion';
-import type { Item } from '../types/Item';
 
 export default function Cotizaciones() {
   const { id } = useParams<{ id: string }>();
@@ -44,12 +45,16 @@ export default function Cotizaciones() {
   const [busqueda, setBusqueda] = useState('');
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [showModalCliente, setShowModalCliente] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [correlativo, setCorrelativo] = useState<number | null>(null);
 
-  const { seleccionados, subtotal, iva, total } = calcularResumen();
+  const resumen = calcularResumen
+    ? calcularResumen()
+    : { seleccionados: [], subtotal: 0, iva: 0, total: 0 };
+  const { seleccionados, subtotal, iva, total } = resumen;
 
-  // 🔹 Funciones locales para crear y actualizar cotización
+  // Funciones para crear/actualizar cotización
   const fetchCrearCotizacion = async (data: any) => {
     const res = await api.post('/cotizaciones', data);
     return res.data;
@@ -78,25 +83,41 @@ export default function Cotizaciones() {
       const data = {
         cliente, direccion, rutCliente, giroCliente, direccionCliente,
         comunaCliente, ciudadCliente, atencion, emailCliente, telefonoCliente,
-        formaPago, nota, fechaHoy: new Date().toLocaleDateString(), fechaEntrega, metodoPago, tipo,
+        formaPago, nota, fechaHoy: new Date().toLocaleDateString(),
+        fechaEntrega, metodoPago, tipo,
         productos: seleccionados.map(p => ({
           itemId: p.id.toString(),
           cantidad: p.cantidad,
+          unidad: p.unidad,
           nombre: p.nombre,
           precio: p.precio,
           total: p.total
         }))
       };
+
       let res;
       if (id) res = await fetchActualizarCotizacion(id, data);
       else res = await fetchCrearCotizacion(data);
 
-      setCorrelativo(res.numero);
+      setCorrelativo(res.cotizacion.numero);
 
       const pdfBlob = generarGuiaPDF(cliente, seleccionados, {
-        fechaEntrega, metodoPago, tipoDocumento: tipo, rutCliente, numeroDocumento: res.numero,
-        giroCliente, direccionCliente, comunaCliente, ciudadCliente, atencion, emailCliente, telefonoCliente,
-        tipo, direccion, formaPago, nota
+        fechaEntrega,
+        metodoPago,
+        tipoDocumento: tipo,
+        numeroDocumento: res.cotizacion.numero,
+        rutCliente,
+        giroCliente,
+        direccionCliente,
+        comunaCliente,
+        ciudadCliente,
+        atencion,
+        emailCliente,
+        telefonoCliente,
+        tipo,
+        direccion,
+        formaPago,
+        nota
       });
 
       const url = URL.createObjectURL(pdfBlob);
@@ -104,9 +125,28 @@ export default function Cotizaciones() {
       setShowPdfModal(true);
 
       const fd = new FormData();
-      fd.append('file', new File([pdfBlob], `cotizacion-${res.numero}.pdf`, { type: 'application/pdf' }));
-      fd.append('cotizacionId', res._id);
-      await api.post('/cotizaciones/upload-pdf', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      fd.append(
+        'file',
+        new File(
+          [pdfBlob],
+          `cotizacion-${res.cotizacion.numero}.pdf`,
+          { type: 'application/pdf' }
+        )
+      );
+      fd.append('cotizacionId', res.cotizacion._id);
+      const uploadRes = await api.post(
+        '/cotizaciones/upload-pdf',
+        fd,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+
+      setPdfUrl(
+        `${import.meta.env.VITE_API_URL}${uploadRes.data.pdfUrl}`
+      );
 
       alert('✅ Cotización creada/actualizada');
     } catch (err) {
@@ -118,94 +158,558 @@ export default function Cotizaciones() {
   };
 
   const enviarWhatsapp = () => {
-    if (!telefonoCliente) { alert("⚠️ El cliente no tiene número de teléfono"); return; }
+    if (!telefonoCliente) {
+      alert("⚠️ El cliente no tiene número de teléfono");
+      return;
+    }
+
     const numero = telefonoCliente.replace(/\s+/g, "");
-    const linkPDF = `${window.location.origin}/pdfs/doc.pdf`;
-    const mensaje = `Hola ${cliente}, te envío la ${tipo === "nota" ? "nota de venta" : "cotización"} N°${correlativo ?? "pendiente"}.
 
-Total: $${total.toLocaleString("es-CL")}
-Forma de pago: ${metodoPago}
-Fecha de entrega: ${fechaEntrega || "Por confirmar"}
+    const linkPDF = pdfUrl || "PDF no disponible";
 
-Puedes descargar el documento aquí: ${linkPDF}
-
-¡Gracias por tu preferencia!`;
+    const mensaje = `Hola ${cliente}, te envío la ${tipo === "nota" ? "nota de venta" : "cotización"
+      } N°${correlativo ?? "pendiente"}.
+  
+  Total: $${total.toLocaleString("es-CL")}
+  Forma de pago: ${metodoPago}
+  Fecha de entrega: ${fechaEntrega || "Por confirmar"}
+  
+  Puedes descargar el documento aquí:
+  ${linkPDF}
+  
+  ¡Gracias por tu preferencia!`;
 
     const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
+
     window.open(url, "_blank");
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-800">
-        <FileText className="w-6 h-6 text-blue-600" />
-        DOCUMENTO
-      </h1>
+    <div className="h-screen overflow-hidden bg-slate-200 p-1">
 
-      <AccionesCotizacion
-        onGuardarBorrador={guardarBorrador}
-        onConfirmar={enviarCotizacion}
-        enviando={enviando}
-        pdfUrl={pdfUrl}
-        correlativo={correlativo}
-        tipo={tipo}
-      />
+      <div className="
+        h-full
+        flex
+        flex-col
+        bg-white
+        border
+        border-slate-400
+        rounded-md
+        shadow-lg
+        overflow-hidden
+      ">
 
-      <FormularioCliente
-        cliente={cliente} setCliente={setCliente}
-        rutCliente={rutCliente} setRutCliente={setRutCliente}
-        fechaEntrega={fechaEntrega} setFechaEntrega={setFechaEntrega}
-        disableTipo={!!id}
-        metodoPago={metodoPago} setMetodoPago={setMetodoPago}
-        tipo={tipo} setTipo={setTipo}
-        giroCliente={giroCliente} setGiroCliente={setGiroCliente}
-        direccionCliente={direccionCliente} setDireccionCliente={setDireccionCliente}
-        comunaCliente={comunaCliente} setComunaCliente={setComunaCliente}
-        ciudadCliente={ciudadCliente} setCiudadCliente={setCiudadCliente}
-        atencion={atencion} setAtencion={setAtencion}
-        emailCliente={emailCliente} setEmailCliente={setEmailCliente}
-        telefonoCliente={telefonoCliente} setTelefonoCliente={setTelefonoCliente}
-        direccion={direccion} setDireccion={setDireccion}
-        formaPago={formaPago} setFormaPago={setFormaPago}
-        nota={nota} setNota={setNota}
-      />
+        {/* HEADER */}
+        <div className="
+          border-b
+          border-slate-300
+          px-4
+          py-2
+          flex
+          items-start
+          justify-between
+        ">
 
-      <div className="sticky top-0 z-20 bg-gray-50 p-4 rounded-lg shadow-sm">
-        <BuscadorProductos
-          busqueda={busqueda}
-          setBusqueda={setBusqueda}
-          onAgregar={agregarItem}
-        />
-      </div>
+          <div>
+            <h1 className="text-lg font-bold tracking-tight text-slate-800">
+              ARIDOS SERGIO SILVA
+            </h1>
 
-      <div className="border rounded-lg overflow-y-auto max-h-96 shadow-sm">
-        {seleccionados.length > 0 ? (
-          <ResumenTablaProductos
-            seleccionados={seleccionados}
-            subtotal={subtotal}
-            iva={iva}
-            total={total}
-            onCantidadChange={handleCantidadChange}
-            onEliminar={eliminarProducto}
-            onPrecioChange={handlePrecioChange}
-          />
-        ) : (
-          <p className="p-4 text-gray-500">Agrega productos aquí</p>
-        )}
-      </div>
+            <p className="text-[11px] text-slate-500 leading-4">
+              Venta de áridos y materiales
+            </p>
 
-      {showPdfModal && pdfUrl && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg w-3/4 h-5/6 relative flex flex-col">
-            <button onClick={() => setShowPdfModal(false)} className="absolute top-2 right-2 text-gray-600 hover:text-gray-900">✕</button>
-            <iframe src={pdfUrl} className="w-full flex-grow rounded-b-lg" title="PDF Preview" />
-            <div className="p-4 flex justify-end gap-3 border-t">
-              <button onClick={enviarWhatsapp} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg">📲 Enviar por WhatsApp</button>
-              <button onClick={() => setShowPdfModal(false)} className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">❌ Cerrar</button>
-            </div>
+            <p className="text-[11px] text-slate-500 leading-4">
+              Santiago, Chile
+            </p>
           </div>
+
+          <div className="
+            border-2
+            border-red-500
+            rounded-md
+            px-4
+            py-2
+            text-center
+            min-w-[180px]
+          ">
+
+            <p className="text-red-600 font-bold text-sm">
+              R.U.T: 5.586.794-1
+            </p>
+
+            <h2 className="text-lg font-bold text-red-600 leading-5 mt-1">
+              {tipo === "nota"
+                ? "NOTA DE VENTA"
+                : "COTIZACIÓN"}
+            </h2>
+
+            <p className="text-xs mt-1">
+              N°
+              <span className="font-bold ml-1">
+                {correlativo || "----"}
+              </span>
+            </p>
+
+          </div>
+
         </div>
-      )}
+
+        {/* CLIENTE */}
+        <div className="
+          border-b
+          border-slate-300
+          px-4
+          py-2
+        ">
+
+          <div className="
+            flex
+            items-center
+            justify-between
+            mb-2
+          ">
+
+            <h3 className="text-sm font-bold text-slate-700">
+              CLIENTE
+            </h3>
+
+            <button
+              onClick={() => setShowModalCliente(true)}
+              className="
+                bg-blue-600
+                hover:bg-blue-700
+                text-white
+                px-3
+                py-1
+                rounded-md
+                text-xs
+              "
+            >
+              Editar
+            </button>
+
+          </div>
+
+          <div className="
+            grid
+            grid-cols-6
+            gap-x-3
+            gap-y-1
+            text-[11px]
+          ">
+
+            <div>
+              <span className="font-semibold text-slate-500">
+                Cliente
+              </span>
+
+              <p className="truncate">
+                {cliente || "-"}
+              </p>
+            </div>
+
+            <div>
+              <span className="font-semibold text-slate-500">
+                RUT
+              </span>
+
+              <p>{rutCliente || "-"}</p>
+            </div>
+
+            <div>
+              <span className="font-semibold text-slate-500">
+                Entrega
+              </span>
+
+              <p>{fechaEntrega || "-"}</p>
+            </div>
+
+            <div>
+              <span className="font-semibold text-slate-500">
+                Dirección
+              </span>
+
+              <p className="truncate">
+                {direccionCliente || direccion || "-"}
+              </p>
+            </div>
+
+            <div>
+              <span className="font-semibold text-slate-500">
+                Pago
+              </span>
+
+              <p>{metodoPago || "-"}</p>
+            </div>
+
+            <div>
+              <span className="font-semibold text-slate-500">
+                Atención
+              </span>
+
+              <p>{atencion || "-"}</p>
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* BUSCADOR */}
+        <div className="
+          border-b
+          border-slate-300
+          px-3
+          py-1
+          bg-slate-50
+        ">
+
+          <BuscadorProductos
+            busqueda={busqueda}
+            setBusqueda={setBusqueda}
+            onAgregar={agregarItem}
+            tipo={tipo}
+          />
+
+        </div>
+
+        {/* TABLA */}
+        <div className="flex-1 overflow-auto min-h-0">
+
+          <table className="
+            w-full
+            text-xs
+            border-collapse
+          ">
+
+            <thead className="
+              bg-slate-100
+              sticky
+              top-0
+              z-10
+            ">
+
+              <tr>
+
+                <th className="px-2 py-2 text-center border-b w-[90px]">
+                  Cant.
+                </th>
+
+                <th className="px-2 py-2 text-left border-b">
+                  Detalle
+                </th>
+
+                <th className="px-2 py-2 text-center border-b w-[80px]">
+                  Und
+                </th>
+
+                <th className="px-2 py-2 text-right border-b w-[120px]">
+                  Precio
+                </th>
+
+                <th className="px-2 py-2 text-right border-b w-[130px]">
+                  Total
+                </th>
+
+                <th className="px-2 py-2 border-b w-[50px]"></th>
+
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              {seleccionados.length > 0 ? (
+                seleccionados.map((p) => (
+
+                  <tr
+                    key={p.id}
+                    className="border-b hover:bg-slate-50"
+                  >
+
+                    {/* CANTIDAD */}
+                    <td className="px-2 py-1 text-center">
+
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={p.cantidad}
+                        onChange={(e) =>
+                          handleCantidadChange(
+                            p.id,
+                            parseFloat(e.target.value) || 0
+                          )
+                        }
+                        className="
+                          w-16
+                          border
+                          rounded
+                          px-1
+                          py-[2px]
+                          text-center
+                        "
+                      />
+
+                    </td>
+
+                    {/* DETALLE */}
+                    <td className="px-2 py-1">
+                      {p.nombre}
+                    </td>
+
+                    {/* UNIDAD */}
+                    <td className="px-2 py-1 text-center">
+                      {p.unidad || "UN"}
+                    </td>
+
+                    {/* PRECIO */}
+                    <td className="px-2 py-1 text-right">
+
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={p.precio}
+                        onChange={(e) =>
+                          handlePrecioChange(
+                            p.id,
+                            parseFloat(e.target.value) || 0
+                          )
+                        }
+                        className="
+                          w-24
+                          border
+                          rounded
+                          px-1
+                          py-[2px]
+                          text-right
+                        "
+                      />
+
+                    </td>
+
+                    {/* TOTAL */}
+                    <td className="
+                      px-2
+                      py-1
+                      text-right
+                      font-semibold
+                    ">
+                      $
+                      {(p.total || 0).toLocaleString("es-CL")}
+                    </td>
+
+                    {/* DELETE */}
+                    <td className="text-center">
+
+                      <button
+                        onClick={() => eliminarProducto(p.id)}
+                        className="
+                          text-red-500
+                          hover:text-red-700
+                          text-sm
+                        "
+                      >
+                        ✕
+                      </button>
+
+                    </td>
+
+                  </tr>
+
+                ))
+              ) : (
+
+                <tr>
+
+                  <td
+                    colSpan={6}
+                    className="
+                      text-center
+                      py-8
+                      text-slate-400
+                      italic
+                    "
+                  >
+                    No hay productos agregados
+                  </td>
+
+                </tr>
+
+              )}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+        {/* FOOTER */}
+        <div className="
+          border-t
+          border-slate-300
+          bg-slate-50
+          px-4
+          py-2
+        ">
+
+          <div className="
+            flex
+            items-end
+            justify-between
+          ">
+
+            {/* BOTONES */}
+            <div className="flex gap-2">
+
+              <button
+                onClick={guardarBorrador}
+                className="
+                  bg-slate-700
+                  hover:bg-slate-800
+                  text-white
+                  px-3
+                  py-1.5
+                  rounded-md
+                  text-xs
+                "
+              >
+                Guardar
+              </button>
+
+              <button
+                onClick={enviarCotizacion}
+                disabled={enviando}
+                className="
+                  bg-blue-600
+                  hover:bg-blue-700
+                  text-white
+                  px-3
+                  py-1.5
+                  rounded-md
+                  text-xs
+                "
+              >
+                {enviando
+                  ? "Generando..."
+                  : "Generar"}
+              </button>
+
+              <button
+                onClick={enviarWhatsapp}
+                className="
+                  bg-green-600
+                  hover:bg-green-700
+                  text-white
+                  px-3
+                  py-1.5
+                  rounded-md
+                  text-xs
+                "
+              >
+                WhatsApp
+              </button>
+
+            </div>
+
+            {/* TOTALES */}
+            <div className="w-[240px] text-xs">
+
+              <div className="flex justify-between">
+                <span>Subtotal</span>
+
+                <span>
+                  ${subtotal.toLocaleString("es-CL")}
+                </span>
+              </div>
+
+              <div className="flex justify-between">
+                <span>IVA</span>
+
+                <span>
+                  ${iva.toLocaleString("es-CL")}
+                </span>
+              </div>
+
+              <div className="
+                flex
+                justify-between
+                border-t
+                mt-1
+                pt-1
+                text-lg
+                font-bold
+              ">
+
+                <span>TOTAL</span>
+
+                <span className="text-blue-600">
+                  ${total.toLocaleString("es-CL")}
+                </span>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* MODAL CLIENTE */}
+      <Dialog
+        open={showModalCliente}
+        onOpenChange={setShowModalCliente}
+      >
+
+        <DialogContent className="max-w-2xl">
+
+          <DialogHeader>
+            <DialogTitle>
+              {cliente
+                ? "Editar Cliente"
+                : "Nuevo Cliente"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <FormularioCliente
+            cliente={cliente}
+            setCliente={setCliente}
+            rutCliente={rutCliente}
+            setRutCliente={setRutCliente}
+            fechaEntrega={fechaEntrega}
+            setFechaEntrega={setFechaEntrega}
+            disableTipo={!!id}
+            metodoPago={metodoPago}
+            setMetodoPago={setMetodoPago}
+            tipo={tipo}
+            setTipo={setTipo}
+            giroCliente={giroCliente}
+            setGiroCliente={setGiroCliente}
+            direccionCliente={direccionCliente}
+            setDireccionCliente={setDireccionCliente}
+            comunaCliente={comunaCliente}
+            setComunaCliente={setComunaCliente}
+            ciudadCliente={ciudadCliente}
+            setCiudadCliente={setCiudadCliente}
+            atencion={atencion}
+            setAtencion={setAtencion}
+            emailCliente={emailCliente}
+            setEmailCliente={setEmailCliente}
+            telefonoCliente={telefonoCliente}
+            setTelefonoCliente={setTelefonoCliente}
+            direccion={direccion}
+            setDireccion={setDireccion}
+            formaPago={formaPago}
+            setFormaPago={setFormaPago}
+            nota={nota}
+            setNota={setNota}
+          />
+
+        </DialogContent>
+
+      </Dialog>
+
     </div>
   );
 }

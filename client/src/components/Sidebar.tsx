@@ -1,7 +1,10 @@
 // src/components/SidebarFlotante.tsx
+
 import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
+
 import {
+  LayoutDashboard,
   Boxes,
   FileText,
   StickyNote,
@@ -15,89 +18,328 @@ import {
   X,
 } from "lucide-react";
 
+import { motion, AnimatePresence } from "framer-motion";
+
 export default function SidebarFlotante() {
+
   const [isOpen, setIsOpen] = useState(false);
+
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
-    const dark = localStorage.getItem("theme") === "dark";
+
+    const dark =
+      localStorage.getItem("theme") === "dark";
+
     setIsDark(dark);
-    document.documentElement.classList.toggle("dark", dark);
+
+    document.documentElement.classList.toggle(
+      "dark",
+      dark
+    );
+
   }, []);
 
   const toggleDarkMode = () => {
+
     const html = document.documentElement;
-    const dark = html.classList.toggle("dark");
+
+    const dark =
+      html.classList.toggle("dark");
+
     setIsDark(dark);
-    localStorage.setItem("theme", dark ? "dark" : "light");
+
+    localStorage.setItem(
+      "theme",
+      dark ? "dark" : "light"
+    );
   };
 
   const links = [
-    { to: "/inventario", label: "Inventario", icon: Boxes },
-    { to: "/cotizaciones", label: "Documentos", icon: FileText },
-    { to: "/notas", label: "NotasVentas", icon: StickyNote },
-    { to: "/ver-cotizaciones", label: "Cotizaciones", icon: Files },
-    { to: "/productos", label: "Productos", icon: PackageCheck },
-    { to: "/facturas/nueva", label: "Recepción", icon: FileInput },
-    { to: "/ver-borradores", label: "Borradores", icon: ArchiveRestore },
+
+    {
+      to: "/dashboard-ventas",
+      label: "Dashboard",
+      icon: LayoutDashboard
+    },
+
+    {
+      to: "/inventario",
+      label: "Inventario",
+      icon: Boxes
+    },
+
+    {
+      to: "/cotizaciones",
+      label: "Documentos",
+      icon: FileText
+    },
+
+    {
+      to: "/notas",
+      label: "Notas",
+      icon: StickyNote
+    },
+
+    {
+      to: "/ver-cotizaciones",
+      label: "Cotizaciones",
+      icon: Files
+    },
+
+    {
+      to: "/productos",
+      label: "Productos",
+      icon: PackageCheck
+    },
+
+    {
+      to: "/facturas/nueva",
+      label: "Recepción",
+      icon: FileInput
+    },
+
+    {
+      to: "/ver-borradores",
+      label: "Borradores",
+      icon: ArchiveRestore
+    }
   ];
 
   return (
-    <div>
-      {/* Botón flotante */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-4 left-4 z-50 p-3 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition"
-        title="Menú"
-      >
-        {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-      </button>
 
-      {/* Sidebar flotante */}
-      <aside
-        className={`fixed top-0 left-0 h-full z-40 bg-white dark:bg-gray-900 shadow-xl backdrop-blur-md border-r border-gray-200 dark:border-gray-700 transition-transform duration-300
-                    ${isOpen ? "translate-x-0" : "-translate-x-full"} w-64`}
+    <>
+
+      {/* BOTON */}
+      <motion.button
+
+        whileTap={{ scale: 0.95 }}
+
+        whileHover={{ scale: 1.03 }}
+
+        onClick={() => setIsOpen(!isOpen)}
+
+        className="
+          fixed top-5 left-5 z-50
+
+          flex items-center justify-center
+
+          w-11 h-11
+
+          rounded-2xl
+
+          border border-gray-200 dark:border-gray-700
+
+          bg-white/80 dark:bg-gray-900/80
+
+          backdrop-blur-xl
+
+          shadow-lg shadow-black/5
+
+          hover:bg-gray-100
+          dark:hover:bg-gray-800
+
+          transition-all duration-200
+        "
+
       >
-        {/* Header */}
-        <div className="p-4 border-b border-gray-300 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Rasiva SPA</h2>
-          <button
-            onClick={toggleDarkMode}
-            className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+
+        <AnimatePresence mode="wait">
+
+          <motion.div
+            key={isOpen ? "close" : "menu"}
+            initial={{ opacity: 0, rotate: -90 }}
+            animate={{ opacity: 1, rotate: 0 }}
+            exit={{ opacity: 0, rotate: 90 }}
+            transition={{ duration: 0.15 }}
           >
-            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+
+            {isOpen
+              ? <X className="w-5 h-5" />
+              : <Menu className="w-5 h-5" />
+            }
+
+          </motion.div>
+
+        </AnimatePresence>
+
+      </motion.button>
+
+      {/* OVERLAY */}
+      <AnimatePresence>
+
+        {isOpen && (
+
+          <motion.div
+
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+
+            className="
+              fixed inset-0 z-30
+              bg-black/40 backdrop-blur-sm
+            "
+
+            onClick={() => setIsOpen(false)}
+          />
+
+        )}
+
+      </AnimatePresence>
+
+      {/* SIDEBAR */}
+      <motion.aside
+
+        initial={false}
+
+        animate={{
+          x: isOpen ? 0 : -320
+        }}
+
+        transition={{
+          type: "spring",
+          damping: 24,
+          stiffness: 240
+        }}
+
+        className="
+          fixed top-0 left-0 z-40
+
+          h-full w-72
+
+          bg-white/85 dark:bg-gray-950/85
+
+          backdrop-blur-2xl
+
+          border-r border-gray-200/70
+          dark:border-gray-800
+
+          shadow-2xl
+        "
+
+      >
+
+        {/* HEADER */}
+        <div className="
+          h-20 px-6
+
+          flex items-center justify-between
+
+          border-b border-gray-200/70
+          dark:border-gray-800
+        ">
+
+          <div>
+
+            <h2 className="
+              text-lg font-semibold tracking-tight
+            ">
+              Rasiva SPA
+            </h2>
+
+            <p className="
+              text-xs text-gray-500 mt-1
+            ">
+              Gestión comercial
+            </p>
+
+          </div>
+
+          {/* DARK MODE */}
+          <button
+
+            onClick={toggleDarkMode}
+
+            className="
+              w-10 h-10
+
+              flex items-center justify-center
+
+              rounded-xl
+
+              hover:bg-gray-100
+              dark:hover:bg-gray-800
+
+              transition-colors
+            "
+
+          >
+
+            {isDark
+              ? <Sun className="w-4 h-4" />
+              : <Moon className="w-4 h-4" />
+            }
+
           </button>
+
         </div>
 
-        {/* Links */}
-        <nav className="flex flex-col p-2 space-y-1">
-          {links.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                }`
-              }
-              onClick={() => setIsOpen(false)} // cierra sidebar al hacer clic
-            >
-              <Icon className="w-5 h-5" />
-              <span>{label}</span>
-            </NavLink>
-          ))}
-        </nav>
-      </aside>
+        {/* LINKS */}
+        <nav className="
+          p-4 space-y-1
+        ">
 
-      {/* Overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/30"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-    </div>
+          {links.map(({ to, label, icon: Icon }) => (
+
+            <NavLink
+
+              key={to}
+
+              to={to}
+
+              onClick={() => setIsOpen(false)}
+
+              className={({ isActive }) => `
+
+                relative flex items-center gap-3
+
+                px-4 py-3
+
+                rounded-2xl
+
+                text-sm font-medium
+
+                transition-all duration-200
+
+                ${isActive
+
+                  ? `
+                    bg-slate-900
+                    text-white
+                    shadow-lg shadow-slate-900/10
+                  `
+
+                  : `
+                    text-gray-600
+                    dark:text-gray-300
+
+                    hover:bg-gray-100
+                    dark:hover:bg-gray-900
+
+                    hover:text-gray-900
+                    dark:hover:text-white
+                  `
+                }
+              `}
+
+            >
+
+              <Icon className="w-4 h-4" />
+
+              <span>
+                {label}
+              </span>
+
+            </NavLink>
+
+          ))}
+
+        </nav>
+
+      </motion.aside>
+
+    </>
+
   );
 }

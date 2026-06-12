@@ -1,36 +1,23 @@
 // src/pages/NotasDeVenta.tsx
 import { useEffect, useState, useMemo } from "react";
 import api from "../api/api";
-import { FileText, Trash2, CreditCard, Truck, Percent } from "lucide-react";
+import {
+  FileText, Trash2, CreditCard, Truck, Percent, UserCheck,
+  X,
+} from "lucide-react";
 import GananciaModal from "../components/GananciaModal";
-
-interface Producto {
-  _id: string;
-  nombre: string;
-  cantidad: number;
-  precio: number;
-  costo?: number;
-  despachado?: number;
-}
-
-interface NotaDeVenta {
-  _id: string;
-  cliente: string;
-  direccion: string;
-  fechaEntrega: string;
-  metodoPago: string;
-  productos: Producto[];
-  pdfUrl?: string;
-  anulada?: string;
-  cotizacionOriginalId?: string;
-  tipo?: string;
-}
+import type {
+  Cotizacion,
+  Producto
+} from "../types/Cotizacion";
+import type { NotaDeVenta } from "../types/NotaDeVenta";
 
 export default function NotasDeVenta() {
-  const [notas, setNotas] = useState<NotaDeVenta[]>([]);
+  const [notas, setNotas] = useState<Cotizacion[]>([]);
   const [, setLoading] = useState(false);
   const [, setProgress] = useState(0);
   const [, setProgressVisible] = useState(false);
+
   const [mesSeleccionado, setMesSeleccionado] = useState<string>(() => {
     const hoy = new Date();
     return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
@@ -43,13 +30,19 @@ export default function NotasDeVenta() {
 
   const [payingId, setPayingId] = useState<string | null>(null);
   const [, setShowGuiaModal] = useState(false);
-  const [guiaNota] = useState<NotaDeVenta | null>(null);
+  const [guiaNota] = useState<Cotizacion | null>(null);
   const [despachoCantidades] = useState<number[]>([]);
 
   // 🔥 Ganancia modal
   const [showGananciaModal, setShowGananciaModal] = useState(false);
   const [productosGanancia, setProductosGanancia] = useState<Producto[]>([]);
+  // 👤 Modal recibido por
+  const [showRecibidoModal, setShowRecibidoModal] = useState(false);
 
+  const [notaSeleccionada, setNotaSeleccionada] =
+    useState<Cotizacion | null>(null);
+
+  const [recibidoPor, setRecibidoPor] = useState("");
   const notasPorPagina = 5;
 
   useEffect(() => {
@@ -67,13 +60,21 @@ export default function NotasDeVenta() {
   }, []);
 
   const cargarNotas = async () => {
+
     setLoading(true);
     setProgress(0);
     setProgressVisible(true);
     try {
       const res = await api.get("/cotizaciones");
-      const todasNotas: NotaDeVenta[] = res.data.filter(
-        (c: NotaDeVenta) => c.tipo === "nota"
+      console.log(
+        JSON.stringify(
+          res.data.find((x) => x.tipo === "nota"),
+          null,
+          2
+        )
+      );
+      const todasNotas: Cotizacion[] = res.data.filter(
+        (c: Cotizacion) => c.tipo === "nota"
       );
       setNotas(todasNotas);
     } catch (err) {
@@ -127,6 +128,28 @@ export default function NotasDeVenta() {
     }
   };
 
+  const marcarPagado = async (notaId: string) => {
+    const nombre = prompt("¿A quién se le pagó esta nota?");
+
+    if (!nombre) return;
+
+    try {
+      await api.put(`/cotizaciones/${notaId}`, {
+        pagadoA: nombre,
+        estadoPago: "pagado",
+        fechaPago: new Date(),
+      });
+
+      alert("✅ Pago registrado");
+
+      cargarNotas();
+
+    } catch (err) {
+      console.error(err);
+      alert("❌ Error registrando pago");
+    }
+  };
+
   // 📲 Enviar WhatsApp con PDF
   const enviarWhatsapp = (nota: NotaDeVenta, pdfUrl: string) => {
     const numero = "569XXXXXXXX"; // ⚠️ reemplazar con número real si lo guardas en DB
@@ -151,8 +174,13 @@ Puedes ver el documento aquí: ${pdfUrl}`;
 
   const notasFiltradas = useMemo(() => {
     return notas.filter((nota) => {
+      // ✅ mostrar igual si no tiene fecha
+      if (!nota.fechaEntrega) return true;
+
       if (!mesSeleccionado) return true;
-      const mesNota = nota.fechaEntrega?.slice(0, 7);
+
+      const mesNota = nota.fechaEntrega.slice(0, 7);
+
       return mesNota === mesSeleccionado;
     });
   }, [notas, mesSeleccionado]);
@@ -189,6 +217,50 @@ Puedes ver el documento aquí: ${pdfUrl}`;
     return `${day}-${month}-${year}`;
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  // 👤 Guardar quién recibió pago
+  const guardarRecibidoPor = async () => {
+
+    if (!notaSeleccionada) return;
+
+    try {
+
+      await api.put(
+        `/cotizaciones/${notaSeleccionada._id}/recibido-por`,
+        {
+          recibidoPor,
+        }
+      );
+
+      // ✅ actualizar tabla local
+      setNotas((prev) =>
+        prev.map((n) =>
+          n._id === notaSeleccionada._id
+            ? {
+              ...n,
+              recibidoPor,
+            }
+            : n
+        )
+      );
+
+      setShowRecibidoModal(false);
+
+      setNotaSeleccionada(null);
+
+      setRecibidoPor("");
+
+    } catch (err) {
+
+      console.error(err);
+
+      alert("Error actualizando recibidoPor");
+    }
+  };
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen flex flex-col">
       <div className="bg-white shadow-md rounded-xl p-4 flex items-center justify-between mb-4">
@@ -196,7 +268,6 @@ Puedes ver el documento aquí: ${pdfUrl}`;
           <FileText className="w-6 h-6" />
           Notas de Venta
         </h2>
-
         <div className="flex items-center gap-2">
           <label className="text-sm text-gray-600">Filtrar por mes:</label>
           <input
@@ -208,10 +279,19 @@ Puedes ver el documento aquí: ${pdfUrl}`;
             }}
             className="border rounded px-2 py-1 text-sm"
           />
+
+          {/* 🖨 BOTÓN IMPRIMIR */}
+          <button
+            onClick={handlePrint}
+            className="ml-2 bg-gray-800 text-white px-3 py-1 rounded text-sm hover:bg-black"
+          >
+            🖨 Imprimir
+          </button>
         </div>
+
       </div>
 
-      <div className="flex-1 shadow-sm rounded-lg relative overflow-x-auto bg-white">
+      <div id="print-area" className="flex-1 shadow-sm rounded-lg relative overflow-x-auto bg-white">
         <table className="w-full text-left border-collapse">
           <thead className="bg-gray-100 border-b border-gray-300 text-sm">
             <tr>
@@ -223,13 +303,16 @@ Puedes ver el documento aquí: ${pdfUrl}`;
               <th className="p-3 text-right">IVA</th>
               <th className="p-3 text-right">Total</th>
               <th className="p-3 text-center">PDF</th>
+              <th className="p-3 text-center">
+                Recibido Por
+              </th>
               <th className="p-3 text-center">Acciones</th>
             </tr>
           </thead>
           <tbody className="text-sm">
             {notasPaginadas.length === 0 ? (
               <tr>
-                <td colSpan={9} className="p-4 text-center text-gray-500">
+                <td colSpan={10} className="p-4 text-center text-gray-500">
                   No hay notas de venta registradas en esta página.
                 </td>
               </tr>
@@ -249,14 +332,19 @@ Puedes ver el documento aquí: ${pdfUrl}`;
                 return (
                   <tr
                     key={nota._id}
-                    className={`${
-                      estaAnulada ? "bg-red-50" : "bg-white"
-                    } border-b hover:bg-gray-50`}
+                    className={`${estaAnulada ? "bg-red-50" : "bg-white"
+                      } border-b hover:bg-gray-50`}
                   >
                     <td className="p-3">{nota.cliente}</td>
                     <td className="p-3">{nota.direccion}</td>
                     <td className="p-3">{formatearFecha(nota.fechaEntrega)}</td>
-                    <td className="p-3">{nota.metodoPago}</td>
+                    <td className="p-3">
+                      <div className="flex flex-col">
+                        <span>{nota.metodoPago}</span>
+
+
+                      </div>
+                    </td>
                     <td className="p-3 text-right">
                       ${neto.toLocaleString("es-CL")}
                     </td>
@@ -282,6 +370,23 @@ Puedes ver el documento aquí: ${pdfUrl}`;
                       ) : (
                         <span className="text-gray-400">—</span>
                       )}
+                    </td>
+                    <td className="p-3 text-center">
+
+                      {nota.recibidoPor ? (
+
+                        <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-semibold">
+                          {nota.recibidoPor}
+                        </span>
+
+                      ) : (
+
+                        <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs">
+                          Pendiente
+                        </span>
+
+                      )}
+
                     </td>
                     <td className="p-3 text-center">
                       {!estaAnulada ? (
@@ -312,6 +417,16 @@ Puedes ver el documento aquí: ${pdfUrl}`;
                           </button>
                           <button
                             onClick={() => {
+
+                              console.log("PRODUCTOS NOTA");
+                              console.log(nota.productos);
+
+                              setProductosGanancia(nota.productos || []);
+                              setShowGananciaModal(true);
+                            }}
+                          ></button>
+                          <button
+                            onClick={() => {
                               setProductosGanancia(nota.productos || []);
                               setShowGananciaModal(true);
                             }}
@@ -319,6 +434,22 @@ Puedes ver el documento aquí: ${pdfUrl}`;
                             title="Ganancia"
                           >
                             <Percent className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+
+                              setNotaSeleccionada(nota);
+
+                              setRecibidoPor(
+                                nota.recibidoPor || ""
+                              );
+
+                              setShowRecibidoModal(true);
+                            }}
+                            className="text-indigo-600 hover:text-indigo-800"
+                            title="Recibido por"
+                          >
+                            <UserCheck className="w-4 h-4" />
                           </button>
                         </div>
                       ) : (
@@ -430,6 +561,101 @@ Puedes ver el documento aquí: ${pdfUrl}`;
           </div>
         </div>
       )}
+      {/* 👤 MODAL RECIBIDO POR */}
+      {showRecibidoModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative animate-in fade-in zoom-in duration-200">
+
+            <button
+              onClick={() => setShowRecibidoModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-5">
+
+              <div className="bg-indigo-100 p-3 rounded-xl">
+                <UserCheck className="w-6 h-6 text-indigo-700" />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold text-gray-800">
+                  Registrar Pago
+                </h3>
+
+                <p className="text-sm text-gray-500">
+                  ¿Quién recibió este pago?
+                </p>
+              </div>
+            </div>
+
+            <input
+              type="text"
+              value={recibidoPor}
+              onChange={(e) =>
+                setRecibidoPor(e.target.value)
+              }
+              placeholder="Ej: José, Caja, Carlos..."
+              className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
+
+            <div className="flex justify-end gap-3 mt-6">
+
+              <button
+                onClick={() =>
+                  setShowRecibidoModal(false)
+                }
+                className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700"
+              >
+                Cancelar
+              </button>
+
+              <button
+                onClick={guardarRecibidoPor}
+                className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+              >
+                Guardar
+              </button>
+
+            </div>
+          </div>
+        </div>
+      )}
+      <style>
+        {`
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+
+      #print-area, #print-area * {
+        visibility: visible;
+      }
+
+      #print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+
+      button {
+        display: none !important;
+      }
+
+      th, td {
+        font-size: 12px;
+        padding: 6px;
+      }
+
+      h2 {
+        font-size: 18px;
+      }
+    }
+  `}
+      </style>
     </div>
   );
 }

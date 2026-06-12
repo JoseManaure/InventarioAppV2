@@ -1,19 +1,26 @@
 import { useState } from "react";
 import { Button } from "./ui/button";
 
+
+
 export default function ChatAI() {
   const [input, setInput] = useState("");
   const [respuesta, setRespuesta] = useState("");
   const [loading, setLoading] = useState(false);
+  
 
   const enviarPregunta = async () => {
     if (!input.trim()) return;
     setLoading(true);
 
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch("http://localhost:3000/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`  // ⚡ Importante
+        },
         body: JSON.stringify({ message: input }),
       });
       const data = await res.json();

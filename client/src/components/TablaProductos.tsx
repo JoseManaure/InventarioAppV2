@@ -48,7 +48,8 @@ export default function TablaProductos({ productos, onCantidadChange, onEliminar
                       min={1}
                       className="w-16 border border-gray-300 rounded px-2 py-1 text-right"
                       value={p.cantidad}
-                      onChange={(e) => onCantidadChange(p.id, parseInt(e.target.value) || 1)}
+
+                      onChange={(e) => onCantidadChange(p.id, parseFloat(e.target.value) || 0)}
                     />
                   </td>
                   <td className="px-4 py-3">{p.nombre}</td>

@@ -18,7 +18,10 @@ interface GananciaModalProps {
 
 export default function GananciaModal({ open, onClose, productos }: GananciaModalProps) {
   const productosConGanancia = productos.map((p) => {
-     const costoUnitario = p.costo ?? p.itemId?.costo ?? 0;
+    const costoUnitario =
+      Number(p.costo) > 0
+        ? Number(p.costo)
+        : Number(p.itemId?.costo || 0);
     const ganancia = ((p.precio ?? 0) - costoUnitario) * (p.cantidad ?? 0);
     const porcentaje =
       costoUnitario > 0 ? (((p.precio ?? 0) - costoUnitario) / costoUnitario) * 100 : 0;

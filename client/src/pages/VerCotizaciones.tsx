@@ -1,12 +1,10 @@
-// src/pages/VerCotizaciones.tsx
 import {
   User,
   MapPin,
   CalendarDays,
   CreditCard,
   DollarSign,
-  FileText,
-  Pencil
+  MoreVertical
 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
@@ -15,7 +13,7 @@ import api from '../api/api';
 import { generarGuiaPDF } from '../utils/pdf';
 
 interface Producto {
-  itemId: string; // ahora siempre el ID
+  itemId: string;
   nombre: string;
   cantidad: number;
   precio: number;
@@ -33,24 +31,26 @@ interface Cotizacion {
   tipo: 'cotizacion' | 'nota';
   pdfUrl?: string;
   numero?: number;
-  rutCliente?: number;
-  giroCliente?: string;
-  emailCliente?: string;
-  formaPago?: string;
-  nota?: string;
   productos?: Producto[];
   yaConvertida?: boolean;
+  tipoDocumento?: string;
 }
 
 export default function VerCotizaciones() {
   const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>([]);
+  const [menuAbierto, setMenuAbierto] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  // =========================
+  // Cargar cotizaciones
+  // =========================
   useEffect(() => {
     const cargar = async () => {
       try {
         const res = await api.get('/cotizaciones');
-        const soloCotizaciones = res.data.filter((c: Cotizacion) => c.tipo === 'cotizacion');
+        const soloCotizaciones = res.data.filter(
+          (c: Cotizacion) => c.tipo === 'cotizacion'
+        );
         setCotizaciones(soloCotizaciones);
       } catch (err) {
         console.error('Error al cargar cotizaciones', err);
@@ -60,20 +60,40 @@ export default function VerCotizaciones() {
     cargar();
   }, []);
 
+  // =========================
+  // Cerrar menú al hacer click fuera
+  // =========================
+  useEffect(() => {
+    const cerrar = () => setMenuAbierto(null);
+    window.addEventListener('click', cerrar);
+    return () => window.removeEventListener('click', cerrar);
+  }, []);
+
+  // =========================
+  // Convertir a nota
+  // =========================
   const convertirCotizacion = async (cotizacion: Cotizacion) => {
     try {
-      const confirmar = window.confirm('¿Convertir esta cotización en nota de venta?');
+      const confirmar = window.confirm('¿Convertir esta cotización en nota?');
       if (!confirmar) return;
 
-      // ✅ Transformar productos para enviar solo itemId
-      const productosActualizados = cotizacion.productos?.map((p) => ({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        itemId: typeof p.itemId === 'object' && p.itemId !== null ? (p.itemId as any)._id : p.itemId,
-        nombre: p.nombre,
-        cantidad: Number(p.cantidad || 0),
-        precio: Number(p.precio || 0),
-        total: Number(p.cantidad || 0) * Number(p.precio || 0),
-      }));
+      const productosActualizados = cotizacion.productos?.map((p) => {
+        let itemIdFinal = null;
+
+        if (p.itemId && typeof p.itemId === 'object') {
+          itemIdFinal = (p.itemId as any)._id;
+        } else if (typeof p.itemId === 'string') {
+          itemIdFinal = p.itemId;
+        }
+
+        return {
+          itemId: itemIdFinal,
+          nombre: p.nombre,
+          cantidad: Number(p.cantidad || 0),
+          precio: Number(p.precio || 0),
+          total: Number(p.cantidad || 0) * Number(p.precio || 0),
+        };
+      });
 
       const res = await api.post(
         `/cotizaciones/${cotizacion._id}/convertir-a-nota`,
@@ -82,113 +102,274 @@ export default function VerCotizaciones() {
 
       const nuevaNota = res.data;
 
-      const pdfBlob = generarGuiaPDF(nuevaNota.cliente, nuevaNota.productos, {
-        tipo: 'nota',
-        direccion: nuevaNota.direccion,
-        fechaEntrega: nuevaNota.fechaEntrega,
-        metodoPago: nuevaNota.metodoPago,
-        tipoDocumento: 'nota',
-        numeroDocumento: nuevaNota.numeroDocumento,
-        rutCliente: nuevaNota.rutCliente,
-        giroCliente: nuevaNota.giroCliente,
-        direccionCliente: nuevaNota.direccionCliente,
-        comunaCliente: nuevaNota.comunaCliente,
-        ciudadCliente: nuevaNota.ciudadCliente,
-        formaPago: nuevaNota.formaPago,
-        nota: nuevaNota.nota,
-        atencion: nuevaNota.atencion,
-        emailCliente: nuevaNota.emailCliente,
-        telefonoCliente: nuevaNota.telefonoCliente,
-      });
+      const pdfBlob = generarGuiaPDF(
+        nuevaNota.cliente,
+        nuevaNota.productos,
+        {
+          tipo: 'nota',
+          direccion: nuevaNota.direccion,
+          fechaEntrega: nuevaNota.fechaEntrega,
+          metodoPago: nuevaNota.metodoPago,
+          tipoDocumento: nuevaNota.tipoDocumento || 'nota',
+        }
+      );
 
       const formData = new FormData();
-      const file = new File([pdfBlob], `nota-${nuevaNota.numeroDocumento}.pdf`, { type: 'application/pdf' });
+      const file = new File(
+        [pdfBlob],
+        `nota-${nuevaNota.numero}.pdf`,
+        { type: 'application/pdf' }
+      );
+
       formData.append('file', file);
       formData.append('cotizacionId', nuevaNota._id);
 
       await api.post('/cotizaciones/upload-pdf', formData);
 
-      alert('✅ Convertido a nota de venta y PDF subido exitosamente');
+      alert('✅ Convertida a nota correctamente');
       navigate('/notas');
     } catch (error) {
-      console.error('❌ Error al generar o subir el PDF:', error);
-      alert('Error al convertir cotización');
+      console.error(error);
+      alert('❌ Error al convertir');
     }
   };
 
+  // =========================
+  // Eliminar
+  // =========================
+  const eliminarCotizacion = async (id: string) => {
+    try {
+      const confirmar = window.confirm('¿Eliminar cotización?');
+      if (!confirmar) return;
+
+      await api.delete(`/cotizaciones/${id}`);
+
+      setCotizaciones((prev) => prev.filter((c) => c._id !== id));
+    } catch (error) {
+      console.error(error);
+      alert('Error al eliminar');
+    }
+  };
+
+  // =========================
+  // UI
+  // =========================
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-semibold mb-4">Cotizaciones Generadas</h2>
+    <div className="p-6 max-w-7xl mx-auto">
+      <h2 className="text-2xl font-semibold mb-6">
+        Cotizaciones
+      </h2>
 
-      <table className="w-full text-sm shadow-md rounded-lg overflow-hidden border border-gray-200">
-        <thead>
-          <tr>
-            <th className="bg-green-100 text-left px-4 py-2">
-              <div className="flex items-center gap-2"><User size={16} /> Cliente</div>
-            </th>
-            <th className="bg-blue-100 text-left px-4 py-2">
-              <div className="flex items-center gap-2"><MapPin size={16} /> Dirección</div>
-            </th>
-            <th className="bg-yellow-100 text-left px-4 py-2">
-              <div className="flex items-center gap-2"><CalendarDays size={16} /> Fecha Entrega</div>
-            </th>
-            <th className="bg-purple-100 text-left px-4 py-2">
-              <div className="flex items-center gap-2"><CreditCard size={16} /> Pago</div>
-            </th>
-            <th className="bg-pink-100 text-left px-4 py-2">
-              <div className="flex items-center gap-2"><DollarSign size={16} /> Total</div>
-            </th>
-            <th className="bg-gray-200 text-left px-4 py-2">
-              <div className="flex items-center gap-2"><FileText size={16} /> Acciones</div>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {cotizaciones.map((cot) => (
-            <tr key={cot._id} className="hover:bg-gray-50">
-              <td className="bg-green-50 px-4 py-2">{cot.cliente}</td>
-              <td className="bg-blue-50 px-4 py-2">{cot.direccion}</td>
-              <td className="bg-yellow-50 px-4 py-2">{cot.fechaEntrega}</td>
-              <td className="bg-purple-50 px-4 py-2">{cot.metodoPago}</td>
-              <td className="bg-pink-50 px-4 py-2">
-                ${(
-                  cot.productos?.reduce((acc, p) => acc + p.precio * p.cantidad, 0) || 0
-                ).toLocaleString('es-CL')}
-              </td>
-              <td className="bg-gray-50 px-4 py-2 space-y-1">
-                {cot.pdfUrl && (
-                  <a
-                    href={`http://localhost:3000${cot.pdfUrl}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 underline flex items-center gap-1"
-                  >
-                    <FileText size={14} /> PDF
-                  </a>
-                )}
-
-                <button
-                  onClick={() => convertirCotizacion(cot)}
-                  disabled={cot.yaConvertida}
-                  className={`w-full px-3 py-1 text-sm text-white rounded flex items-center justify-center gap-1 ${
-                    cot.yaConvertida ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-                >
-                  <FileText size={14} />
-                  {cot.yaConvertida ? 'Ya convertida' : ' a Nota'}
-                </button>
-
-                <button
-                  onClick={() => navigate(`/cotizaciones/${cot._id}`)}
-                  className="w-full px-3 py-1 text-sm text-white bg-green-600 hover:bg-green-700 rounded flex items-center justify-center gap-1"
-                >
-                  <Pencil size={14} /> Editar
-                </button>
-              </td>
+      <div className="border rounded-xl shadow-sm">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-100 text-gray-600">
+            <tr>
+              <th className="px-4 py-3 text-left">
+                Estado
+              </th>
+              <th className="px-4 py-3 text-left">
+                <div className="flex items-center gap-2">
+                  <User size={14} /> Cliente
+                </div>
+              </th>
+              <th className="px-4 py-3 text-left">
+                <MapPin size={14} /> Dirección
+              </th>
+              <th className="px-4 py-3 text-left">
+                <CalendarDays size={14} /> Entrega
+              </th>
+              <th className="px-4 py-3 text-left">
+                <CreditCard size={14} /> Pago
+              </th>
+              <th className="px-4 py-3 text-left">
+                <DollarSign size={14} /> Total
+              </th>
+              <th className="px-4 py-3 text-right"></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+
+          <tbody>
+            {cotizaciones.map((cot) => (
+              <tr
+                key={cot._id}
+                className="border-t hover:bg-gray-50 transition"
+              >
+                {/* ESTADO */}
+                <td className="px-4 py-3">
+                  {cot.yaConvertida ? (
+                    <span
+                      className="
+              inline-flex
+              items-center
+              px-2.5
+              py-1
+              rounded-full
+              text-xs
+              font-medium
+              bg-green-100
+              text-green-700
+            "
+                    >
+                      Convertida
+                    </span>
+                  ) : (
+                    <span
+                      className="
+              inline-flex
+              items-center
+              px-2.5
+              py-1
+              rounded-full
+              text-xs
+              font-medium
+              bg-amber-100
+              text-amber-700
+            "
+                    >
+                      Pendiente
+                    </span>
+                  )}
+                </td>
+
+                {/* CLIENTE */}
+                <td className="px-4 py-3">
+                  {cot.cliente}
+                </td>
+
+                {/* DIRECCION */}
+                <td className="px-4 py-3">
+                  {cot.direccion}
+                </td>
+
+                {/* FECHA */}
+                <td className="px-4 py-3">
+                  {cot.fechaEntrega}
+                </td>
+
+                {/* PAGO */}
+                <td className="px-4 py-3">
+                  {cot.metodoPago}
+                </td>
+
+                {/* TOTAL */}
+                <td className="px-4 py-3 font-medium">
+                  $
+                  {(
+                    cot.productos?.reduce(
+                      (acc, p) => acc + p.precio * p.cantidad,
+                      0
+                    ) || 0
+                  ).toLocaleString('es-CL')}
+                </td>
+
+                {/* MENU */}
+                <td className="px-4 py-3 text-right relative">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+
+                      setMenuAbierto(
+                        menuAbierto === cot._id
+                          ? null
+                          : cot._id
+                      );
+                    }}
+                    className="
+            p-2
+            rounded-md
+            hover:bg-gray-100
+            transition
+          "
+                  >
+                    <MoreVertical size={18} />
+                  </button>
+
+                  {menuAbierto === cot._id && (
+                    <div
+                      className="
+              absolute
+              right-4
+              mt-2
+              w-52
+              bg-white
+              border
+              rounded-xl
+              shadow-xl
+              overflow-hidden
+              z-50
+            "
+                    >
+                      {cot.pdfUrl && (
+                        <a
+                          href={`http://localhost:5001${cot.pdfUrl}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="
+                  block
+                  px-4
+                  py-3
+                  hover:bg-gray-50
+                "
+                        >
+                          📄 Ver PDF
+                        </a>
+                      )}
+
+                      <button
+                        onClick={() =>
+                          navigate(`/cotizaciones/${cot._id}`)
+                        }
+                        className="
+                w-full
+                text-left
+                px-4
+                py-3
+                hover:bg-gray-50
+              "
+                      >
+                        ✏️ Editar
+                      </button>
+
+                      {!cot.yaConvertida && (
+                        <button
+                          onClick={() =>
+                            convertirCotizacion(cot)
+                          }
+                          className="
+                  w-full
+                  text-left
+                  px-4
+                  py-3
+                  hover:bg-gray-50
+                "
+                        >
+                          🔄 Convertir a Nota
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() =>
+                          eliminarCotizacion(cot._id)
+                        }
+                        className="
+                w-full
+                text-left
+                px-4
+                py-3
+                text-red-600
+                hover:bg-red-50
+              "
+                      >
+                        🗑 Eliminar
+                      </button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

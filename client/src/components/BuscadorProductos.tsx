@@ -6,9 +6,10 @@ interface Props {
   busqueda: string;
   setBusqueda: (val: string) => void;
   onAgregar: (item: Item) => void;
+  tipo: string; // 🔥 nuevo
 }
 
-export default function BuscadorProductos({ busqueda, setBusqueda, onAgregar }: Props) {
+export default function BuscadorProductos({ busqueda, setBusqueda, onAgregar, tipo }: Props) {
   const [resultados, setResultados] = useState<Item[]>([]);
   const [cargando, setCargando] = useState(false);
   const [consultado, setConsultado] = useState(false);
@@ -59,11 +60,12 @@ export default function BuscadorProductos({ busqueda, setBusqueda, onAgregar }: 
             resultados.map((item) => (
               <li
                 key={item._id}
-                className={`px-4 py-2 hover:bg-blue-100 cursor-pointer rounded-md transition-all ${
-                  item.cantidad === 0 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-800'
-                }`}
+                className={`px-4 py-2 hover:bg-blue-100 cursor-pointer rounded-md transition-all ${(tipo === "nota" && item.cantidad === 0)
+                  ? 'text-gray-400 cursor-not-allowed'
+                  : 'text-gray-800'
+                  }`}
                 onClick={() => {
-                  if (item.cantidad === 0) return;
+                  if (tipo === "nota" && item.cantidad === 0) return;
                   onAgregar(item);
                   setBusqueda('');
                 }}

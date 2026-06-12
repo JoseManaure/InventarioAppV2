@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import logo from '../assets/logo rasiva.png';
+import logo from '../assets/logo-rasiva.png';
 
 export type ProductoPDF = {
   nombre: string;
@@ -44,12 +44,12 @@ export function generarGuiaPDF(
   // Datos empresa
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('COMERCIAL RASIVA SpA.', 45, 15);
+  doc.text('Sergio Silva Leal.', 45, 15);
   doc.setFont('helvetica', 'normal');
-  doc.text('RUT: 77 143 635-8', 45, 20);
-  doc.text('Servicios de Ingeniería, Compra y Venta de materiales', 45, 25);
+  doc.text('RUT: 5 586 794-1', 45, 20);
+  doc.text('Compra y Venta de Aridos y  materiales de construccion', 45, 25);
   doc.text('Construcción y Transportes.', 45, 30);
-  doc.text('Fono: (02)    Cel. 9 6240 1457 - 9 5649 6112', 45, 35);
+  doc.text('Fono: (+56) Cel. 9 5411 1065 - 9 3758 9348', 45, 35);
   doc.text('Dirección: Balmaceda N°01091, Malloco - Peñaflor', 45, 40);
 
   let tituloPDF = 'Documento';
@@ -189,11 +189,11 @@ export function generarGuiaPDF(
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(0, 0, 0);
-  doc.text('Comercial Rasiva SpA', 10, yNotas + 6);
-  doc.text('Cta.Vista N°21670187273 Bco.Estado', 10, yNotas + 12);
-  doc.text('Rut. 77 143 635-8', 10, yNotas + 18);
+  doc.text('Sergio Silva Leal', 10, yNotas + 6);
+  doc.text('Cheq Electronica N°3557 0328 261 Bco.Estado', 10, yNotas + 12);
+  doc.text('Rut. 5 586 794-1', 10, yNotas + 18);
   doc.setTextColor(0, 0, 255);
-  doc.textWithLink('comercialrasiva@gmail.com', 10, yNotas + 24, { url: 'mailto:comercialrasiva@gmail.com' });
+  doc.textWithLink('silvalealsergio@gmail.com', 10, yNotas + 24, { url: 'mailto:silvalealsergio@gmail.com' });
 
   return doc.output('blob');
 }

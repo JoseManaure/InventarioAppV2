@@ -3,6 +3,7 @@ import api from "../api/api";
 import type { Item } from "../types/Item";
 
 export interface ProductoResumen {
+  unidad: string;
   id: string;
   nombre: string;
   cantidad: number;
@@ -18,7 +19,12 @@ export function useCotizacion(cotizacionId?: string) {
   const [metodoPago, setMetodoPago] = useState('efectivo');
   const [tipo, setTipo] = useState<'cotizacion' | 'nota'>('cotizacion');
   const [items, setItems] = useState<Item[]>([]);
-  const [selectedItems, setSelectedItems] = useState<Record<string, { cantidad: number; nombre: string; precio: number }>>({});
+  const [selectedItems, setSelectedItems] = useState<
+    Record<
+      string,
+      SelectedItem
+    >
+  >({});
   const [giroCliente, setGiroCliente] = useState('');
   const [direccionCliente, setDireccionCliente] = useState('');
   const [comunaCliente, setComunaCliente] = useState('');
@@ -67,13 +73,17 @@ export function useCotizacion(cotizacionId?: string) {
         setFormaPago(d.formaPago ?? "");
         setNota(d.nota ?? "");
 
-        const seleccionadosIniciales: Record<string, { cantidad: number; nombre: string; precio: number }> = {};
+        const seleccionadosIniciales: Record<
+          string,
+          SelectedItem
+        > = {};
         (d.productos || []).forEach((p: any) => {
           const idProd = (p.itemId?._id || p.itemId || p._id).toString();
           seleccionadosIniciales[idProd] = {
             cantidad: p.cantidad || 1,
             nombre: p.nombre || p.itemId?.nombre || '[Eliminado]',
-            precio: p.precio || p.itemId?.precio || 0
+            precio: p.precio || p.itemId?.precio || 0,
+            unidad: p.unidad || p.itemId?.unidad || 'unidad'
           };
         });
         setSelectedItems(seleccionadosIniciales);
@@ -89,31 +99,52 @@ export function useCotizacion(cotizacionId?: string) {
     return () => { mounted = false; }
   }, [cotizacionId]);
 
-  // 🔹 Función para agregar un producto desde el buscador
+  // 🔹 Agregar un producto
   const agregarItem = (item: Item) => {
-    setSelectedItems(prev => ({
-      ...prev,
-      [item._id.toString()]: {
-        cantidad: (prev[item._id.toString()]?.cantidad || 0) + 1,
-        nombre: item.nombre,
-        precio: prev[item._id.toString()]?.precio ?? item.precio
-      }
-    }));
-  };
-
-  const handleCantidadChange = (id: string, cantidad: number) => {
     setSelectedItems(prev => {
-      const copia = { ...prev };
-      if (cantidad <= 0) delete copia[id];
-      else copia[id] = { ...copia[id], cantidad };
-      return copia;
+      const id = item._id.toString();
+      const existente = prev[id];
+
+      if (existente) {
+        return {
+          ...prev,
+          [id]: {
+            ...existente,
+            cantidad: existente.cantidad + 1
+          }
+        };
+      }
+
+      return {
+        ...prev,
+        [id]: {
+          cantidad: 1,
+          nombre: item.nombre,
+          precio: item.precio,
+          unidad: item.unidad || 'unidad'
+        }
+      };
     });
   };
 
+  // 🔹 Cambiar cantidad
+  const handleCantidadChange = (id: string, cantidad: number) => {
+    setSelectedItems(prev => {
+      if (cantidad <= 0) {
+        const copia = { ...prev };
+        delete copia[id];
+        return copia;
+      }
+      return { ...prev, [id]: { ...prev[id], cantidad } };
+    });
+  };
+
+  // 🔹 Cambiar precio
   const handlePrecioChange = (id: string, precio: number) => {
     setSelectedItems(prev => ({ ...prev, [id]: { ...prev[id], precio } }));
   };
 
+  // 🔹 Eliminar producto
   const eliminarProducto = (id: string) => {
     setSelectedItems(prev => {
       const copia = { ...prev };
@@ -122,14 +153,19 @@ export function useCotizacion(cotizacionId?: string) {
     });
   };
 
+  // 🔹 Calcular resumen de productos — AHORA como función
   const calcularResumen = () => {
-    const seleccionados: ProductoResumen[] = Object.entries(selectedItems).map(([id, data]) => ({
-      id,
-      nombre: data.nombre,
-      cantidad: data.cantidad,
-      precio: data.precio,
-      total: data.cantidad * data.precio
-    }));
+    const seleccionados: ProductoResumen[] =
+      Object.entries(selectedItems).map(
+        ([id, data]) => ({
+          id,
+          nombre: data.nombre,
+          cantidad: data.cantidad,
+          precio: data.precio,
+          unidad: data.unidad,
+          total: data.cantidad * data.precio
+        })
+      );
 
     const subtotal = seleccionados.reduce((acc, p) => acc + p.total, 0);
     const iva = subtotal * 0.19;

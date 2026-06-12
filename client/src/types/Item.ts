@@ -1,10 +1,11 @@
 // src/types/Item.ts
 export interface Item {
+  unidad: string;
   _id: string;
-  codigo:string;
+  codigo: string;
   nombre: string;
   cantidad: number;
-  precio:number;
+  precio: number;
   fecha: string;
   costo: number;
   modificadoPor: {

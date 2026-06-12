@@ -15,6 +15,7 @@ interface ItemCatalogo {
   nombre: string;
   precio: number;
   codigo: string;
+  costo?: number;
 }
 
 export default function FacturaCompra() {
@@ -30,6 +31,8 @@ export default function FacturaCompra() {
   ]);
 
   const [catalogo, setCatalogo] = useState<ItemCatalogo[]>([]);
+  const [sugerencias, setSugerencias] = useState<ItemCatalogo[]>([]);
+  const [buscandoIndex, setBuscandoIndex] = useState<number | null>(null);
   const [guardando, setGuardando] = useState(false);
 
   // 🔹 Calcular totales con useMemo (una sola pasada)
@@ -63,6 +66,24 @@ export default function FacturaCompra() {
     fetchCatalogo();
   }, []);
 
+
+  const buscarProductos = async (query: string, index: number) => {
+    if (!query.trim()) {
+      setSugerencias([]);
+      return;
+    }
+
+    try {
+      const res = await api.get(`/items/buscar?q=${query}`);
+
+      setSugerencias(res.data || []);
+      setBuscandoIndex(index);
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const actualizarProducto = (
     index: number,
     campo: keyof ProductoFactura,
@@ -76,10 +97,11 @@ export default function FacturaCompra() {
     if (campo === "nombre") {
       const item = catalogo.find((c) => c.nombre === valor);
       if (item) {
-        copia[index].precioUnitario = item.precio;
+        copia[index].precioUnitario = item.costo || 0;
+
         copia[index].codigo = item.codigo;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (copia[index] as any).costo = (item as any).costo || 0;
+
+        copia[index].costo = item.precio || 0;
       } else {
         copia[index].codigo = "";
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -89,23 +111,47 @@ export default function FacturaCompra() {
 
     setProductos(copia);
   };
-  const actualizarCodigoProducto = (index: number, valor: string) => {
+  const actualizarCodigoProducto = async (index: number, valor: string) => {
     const copia = [...productos];
+
     copia[index].codigo = valor;
 
-    const item = catalogo.find((c) => c.codigo === valor);
-    if (item) {
-      copia[index].nombre = item.nombre;
-      copia[index].precioUnitario = item.precio;
-    }
-
     setProductos(copia);
+
+    if (!valor.trim()) return;
+
+    try {
+      const res = await api.get(`/items/buscar?q=${valor}`);
+
+      const item = res.data?.[0];
+
+      if (item) {
+        copia[index] = {
+          ...copia[index],
+
+          nombre: item.nombre,
+
+          codigo: item.codigo,
+
+          // 👇 costo compra
+          precioUnitario: item.costo || 0,
+
+          // 👇 precio venta
+          costo: item.precio || 0,
+        };
+
+        setProductos([...copia]);
+      }
+
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const agregarFila = () => {
     setProductos([
       ...productos,
-      { nombre: "", cantidad: 0, precioUnitario: 0, codigo: "", costo:0 },
+      { nombre: "", cantidad: 0, precioUnitario: 0, codigo: "", costo: 0 },
     ]);
   };
 
@@ -113,7 +159,7 @@ export default function FacturaCompra() {
     setGuardando(true);
 
     for (const p of productos) {
-      if (!p.nombre || !p.codigo || p.cantidad <= 0 || p.precioUnitario <= 0  ) {
+      if (!p.nombre || !p.codigo || p.cantidad <= 0 || p.precioUnitario <= 0) {
         alert(
           "Todos los productos deben tener nombre, código, cantidad y precio mayor a 0"
         );
@@ -123,9 +169,9 @@ export default function FacturaCompra() {
     }
 
     const productosPayload = productos.map(p => ({
-  ...p,
-  costo: p.costo ?? 0, // si es null o undefined → 0
-}));
+      ...p,
+      costo: p.costo ?? 0, // si es null o undefined → 0
+    }));
 
     try {
       const payload = {
@@ -135,11 +181,11 @@ export default function FacturaCompra() {
         direccion,
         numeroDocumento,
         tipoDocumento,
-          productos: productosPayload,
+        productos: productosPayload,
       };
       await api.post("/facturas", payload);
       alert("✅ Factura guardada con éxito");
- console.log("👉 Enviando factura:", payload);
+      console.log("👉 Enviando factura:", payload);
       // reset
       setEmpresa("");
       setRut("");
@@ -160,171 +206,531 @@ export default function FacturaCompra() {
     <div className="p-4">
       <h2 className="text-xl font-bold mb-4">📥 Recepción de Factura</h2>
 
-      {/* Datos Empresa */}
-      <div className="mb-2">
-        <label className="block">Empresaa</label>
-        <input
-          value={empresa}
-          onChange={(e) => setEmpresa(e.target.value)}
-          className="border p-1 w-full"
-        />
-      </div>
+      <div className="max-w-7xl mx-auto p-6">
 
-      <div className="mb-2">
-        <label className="block">RUT</label>
-        <input
-          value={rut}
-          onChange={(e) => setRut(e.target.value)}
-          className="border p-1 w-full"
-        />
-      </div>
+        {/* HEADER */}
+        <div className="mb-8">
 
-      <div className="mb-2">
-        <label className="block">Rol</label>
-        <input
-          value={rol}
-          onChange={(e) => setRol(e.target.value)}
-          className="border p-1 w-full"
-        />
-      </div>
+          <h1 className="
+          text-3xl font-bold tracking-tight
+        ">
+            Recepción de Factura
+          </h1>
 
-      <div className="mb-2">
-        <label className="block">Dirección</label>
-        <input
-          value={direccion}
-          onChange={(e) => setDireccion(e.target.value)}
-          className="border p-1 w-full"
-        />
-      </div>
+          <p className="
+          text-gray-500 mt-2
+        ">
+            Gestiona compras, productos y recepción de mercadería.
+          </p>
 
-      {/* Documento */}
-      <div className="mb-2">
-        <label className="block">Número de Documento</label>
-        <input
-          value={numeroDocumento}
-          onChange={(e) => setNumeroDocumento(e.target.value)}
-          className="border p-1 w-full"
-        />
-      </div>
+        </div>
 
-      <div className="mb-2">
-        <label className="block">Tipo de Documento</label>
-        <select
-          value={tipoDocumento}
-          onChange={(e) => setTipoDocumento(e.target.value)}
-          className="border p-1 w-full"
-        >
-          <option value="factura">Factura</option>
-          <option value="boleta">Boleta</option>
-          <option value="guia">Guía</option>
-        </select>
-      </div>
+        <div className="grid lg:grid-cols-3 gap-6">
 
-      {/* Productos */}
-      <h3 className="font-semibold mt-4 mb-2">Productos</h3>
-      <table className="w-full border">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border p-1">Producto</th>
-            <th className="border p-1">Código</th>
-            <th className="border p-1">Cantidad</th>
-            <th className="border p-1">Precio Unitario</th>
-            <th className="border p-1">Costo</th>
-          </tr>
-        </thead>
-        <tbody>
-          {productos.map((p, i) => (
-            <tr key={i}>
-              <td className="border p-1">
+          {/* LEFT */}
+          <div className="lg:col-span-2 space-y-6">
+
+            {/* EMPRESA */}
+            <div className="
+            bg-white dark:bg-gray-950
+  
+            border border-gray-200 dark:border-gray-800
+  
+            rounded-3xl
+  
+            p-6
+  
+            shadow-sm
+          ">
+
+              <h2 className="
+              text-lg font-semibold mb-6
+            ">
+                Datos proveedor
+              </h2>
+
+              <div className="
+              grid md:grid-cols-2 gap-4
+            ">
+
+                <input
+                  value={empresa}
+                  onChange={(e) => setEmpresa(e.target.value)}
+                  placeholder="Empresa"
+                  className="
+                  h-12 px-4 rounded-2xl
+  
+                  border border-gray-200
+                  dark:border-gray-700
+  
+                  bg-white dark:bg-gray-900
+  
+                  outline-none
+  
+                  focus:ring-2
+                  focus:ring-amber-400
+                "
+                />
+
+                <input
+                  value={rut}
+                  onChange={(e) => setRut(e.target.value)}
+                  placeholder="RUT"
+                  className="
+                  h-12 px-4 rounded-2xl
+                  border border-gray-200 dark:border-gray-700
+                  bg-white dark:bg-gray-900
+                  outline-none
+                  focus:ring-2 focus:ring-amber-400
+                "
+                />
+
+                <input
+                  value={rol}
+                  onChange={(e) => setRol(e.target.value)}
+                  placeholder="Rol"
+                  className="
+                  h-12 px-4 rounded-2xl
+                  border border-gray-200 dark:border-gray-700
+                  bg-white dark:bg-gray-900
+                  outline-none
+                  focus:ring-2 focus:ring-amber-400
+                "
+                />
+
+                <input
+                  value={direccion}
+                  onChange={(e) => setDireccion(e.target.value)}
+                  placeholder="Dirección"
+                  className="
+                  h-12 px-4 rounded-2xl
+                  border border-gray-200 dark:border-gray-700
+                  bg-white dark:bg-gray-900
+                  outline-none
+                  focus:ring-2 focus:ring-amber-400
+                "
+                />
+
+                <input
+                  value={numeroDocumento}
+                  onChange={(e) => setNumeroDocumento(e.target.value)}
+                  placeholder="Número documento"
+                  className="
+                  h-12 px-4 rounded-2xl
+                  border border-gray-200 dark:border-gray-700
+                  bg-white dark:bg-gray-900
+                  outline-none
+                  focus:ring-2 focus:ring-amber-400
+                "
+                />
+
                 <select
-                  value={p.nombre}
-                  onChange={(e) => actualizarProducto(i, "nombre", e.target.value)}
-                  className="border p-1 w-full"
+                  value={tipoDocumento}
+                  onChange={(e) => setTipoDocumento(e.target.value)}
+                  className="
+                  h-12 px-4 rounded-2xl
+                  border border-gray-200 dark:border-gray-700
+                  bg-white dark:bg-gray-900
+                  outline-none
+                  focus:ring-2 focus:ring-amber-400
+                "
                 >
-                  <option value="">-- Seleccione --</option>
-                  {catalogo.map((c) => (
-                    <option key={c._id} value={c.nombre}>
-                      {c.nombre}
-                    </option>
-                  ))}
+                  <option value="factura">
+                    Factura
+                  </option>
+
+                  <option value="boleta">
+                    Boleta
+                  </option>
+
+                  <option value="guia">
+                    Guía
+                  </option>
+
                 </select>
-              </td>
-                  <td className="border p-1">
-                <input
-                  type="text"
-                  value={p.codigo}
-                  onChange={(e) => actualizarCodigoProducto(i, e.target.value)}
-                  className="border p-1 w-full"
-                />
-              </td>
-              <td className="border p-1">
-                <input
-                  type="number"
-                  value={p.cantidad}
-                  onChange={(e) =>
-                    actualizarProducto(i, "cantidad", Number(e.target.value))
-                  }
-                  className="border p-1 w-full"
-                />
-              </td>
-              <td className="border p-1">
-                <input
-                  type="number"
-                  value={p.precioUnitario}
-                  onChange={(e) =>
-                    actualizarProducto(i, "precioUnitario", Number(e.target.value))
-                  }
-                  className="border p-1 w-full"
-                />
-              </td>
-                   <td className="border p-1">
-                <input
-                  type="number"
-                  value={p.costo || 0}
-                  onChange={(e) =>
-                    actualizarProducto(i, "costo", Number(e.target.value))
-                  }
-                  className="border p-1 w-full"
-                />
-              </td> 
-            </tr>
-          ))}
-        </tbody>
-      </table>
 
-      <button
-        onClick={agregarFila}
-        className="mt-2 px-3 py-1 bg-blue-500 text-white rounded"
-      >
-        ➕ Agregar Producto
-      </button>
+              </div>
 
-      {/* Resumen */}
-      <div className="mt-6 border-t pt-4">
-        <div className="flex justify-between">
-          <span className="font-semibold">Subtotal:</span>
-          <span>${subtotal.toLocaleString()}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="font-semibold">IVA (19%):</span>
-          <span>${iva.toLocaleString()}</span>
-        </div>
-        <div className="flex justify-between text-lg font-bold mt-2">
-          <span>Total:</span>
-          <span>${total.toLocaleString()}</span>
-        </div>
-      </div>
+            </div>
 
-      {/* Guardar */}
-      <div className="mt-6">
-        <button
-          disabled={guardando}
-          onClick={guardarFactura}
-          className="px-4 py-2 bg-green-600 text-white rounded"
-        >
-          {guardando ? "Guardando..." : "💾 Guardar Factura"}
-        </button>
+            {/* PRODUCTOS */}
+            <div className="
+            bg-white dark:bg-gray-950
+  
+            border border-gray-200 dark:border-gray-800
+  
+            rounded-3xl
+  
+            p-6
+  
+            shadow-sm
+          ">
+
+              <div className="
+              flex items-center justify-between mb-6
+            ">
+
+                <div>
+
+                  <h2 className="
+                  text-lg font-semibold
+                ">
+                    Productos
+                  </h2>
+
+                  <p className="
+                  text-sm text-gray-500 mt-1
+                ">
+                    Agrega productos a la factura
+                  </p>
+
+                </div>
+
+                <button
+                  onClick={agregarFila}
+                  className="
+                  px-4 h-11
+  
+                  rounded-2xl
+  
+                  bg-slate-900
+                  hover:bg-slate-800
+  
+                  text-white
+  
+                  text-sm font-medium
+  
+                  transition-all
+                "
+                >
+                  + Agregar
+                </button>
+
+              </div>
+
+              <div className="space-y-4">
+
+                {productos.map((p, i) => (
+
+                  <div
+                    key={i}
+                    className="
+                    border border-gray-200
+                    dark:border-gray-800
+  
+                    rounded-3xl
+  
+                    p-5
+  
+                    bg-gray-50/60
+                    dark:bg-gray-900/50
+                  "
+                  >
+
+                    <div className="
+                    grid md:grid-cols-5 gap-4
+                  ">
+
+                      {/* PRODUCTO */}
+                      <div className="md:col-span-2 relative">
+
+                        <input
+                          type="text"
+                          value={p.nombre}
+                          onChange={(e) => {
+                            actualizarProducto(i, "nombre", e.target.value);
+                            buscarProductos(e.target.value, i);
+                          }}
+                          placeholder="Buscar producto..."
+                          className="
+                          w-full h-12 px-4
+  
+                          rounded-2xl
+  
+                          border border-gray-200
+                          dark:border-gray-700
+  
+                          bg-white dark:bg-gray-900
+  
+                          outline-none
+  
+                          focus:ring-2
+                          focus:ring-amber-400
+                        "
+                        />
+
+                        {buscandoIndex === i &&
+                          sugerencias.length > 0 && (
+
+                            <div className="
+                          absolute z-50 mt-2
+  
+                          w-full
+  
+                          rounded-2xl
+  
+                          border border-gray-200
+                          dark:border-gray-700
+  
+                          bg-white dark:bg-gray-900
+  
+                          shadow-2xl
+  
+                          overflow-hidden
+                        ">
+
+                              {sugerencias.map((item) => (
+
+                                <button
+                                  key={item._id}
+                                  type="button"
+                                  onClick={() => {
+
+                                    const copia = [...productos];
+
+                                    copia[i] = {
+                                      ...copia[i],
+
+                                      nombre: item.nombre,
+
+                                      codigo: item.codigo,
+
+                                      // costo compra histórico
+                                      precioUnitario: item.costo || 0,
+
+                                      // precio venta actual
+                                      costo: item.precio || 0,
+                                    };
+
+                                    setProductos(copia);
+
+                                    setSugerencias([]);
+                                    setBuscandoIndex(null);
+                                  }}
+
+                                  className="
+                                w-full text-left
+  
+                                px-4 py-3
+  
+                                hover:bg-gray-100
+                                dark:hover:bg-gray-800
+  
+                                transition-colors
+                              "
+                                >
+
+                                  <div className="font-medium">
+                                    {item.nombre}
+                                  </div>
+
+                                  <div className="
+                                text-xs text-gray-500 mt-1
+                              ">
+                                    {item.codigo}
+                                  </div>
+
+                                </button>
+
+                              ))}
+
+                            </div>
+
+                          )}
+
+                      </div>
+
+                      {/* CODIGO */}
+                      <input
+                        type="text"
+                        value={p.codigo}
+                        onChange={(e) =>
+                          actualizarCodigoProducto(i, e.target.value)
+                        }
+                        placeholder="Código"
+                        className="
+                        h-12 px-4 rounded-2xl
+                        border border-gray-200 dark:border-gray-700
+                        bg-white dark:bg-gray-900
+                        outline-none
+                        focus:ring-2 focus:ring-amber-400
+                      "
+                      />
+
+                      {/* CANTIDAD */}
+                      <input
+                        type="number"
+                        value={p.cantidad}
+                        onChange={(e) =>
+                          actualizarProducto(
+                            i,
+                            "cantidad",
+                            Number(e.target.value)
+                          )
+                        }
+                        placeholder="Cantidad"
+                        className="
+                        h-12 px-4 rounded-2xl
+                        border border-gray-200 dark:border-gray-700
+                        bg-white dark:bg-gray-900
+                        outline-none
+                        focus:ring-2 focus:ring-amber-400
+                      "
+                      />
+
+                      {/* PRECIO */}
+                      <input
+                        type="number"
+                        value={p.precioUnitario}
+                        onChange={(e) =>
+                          actualizarProducto(
+                            i,
+                            "precioUnitario",
+                            Number(e.target.value)
+                          )
+                        }
+                        placeholder="Costo compra"
+                        className="
+                        h-12 px-4 rounded-2xl
+                        border border-gray-200 dark:border-gray-700
+                        bg-white dark:bg-gray-900
+                        outline-none
+                        focus:ring-2 focus:ring-amber-400
+                      "
+                      />
+                      <div className="text-sm text-gray-500">
+                        Precio venta actual:
+                        <strong>
+                          {" "}
+                          ${Number(p.costo || 0).toLocaleString()}
+                        </strong>
+                      </div>
+                    </div>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* RIGHT */}
+          <div>
+
+            <div className="
+            sticky top-24
+  
+            bg-white dark:bg-gray-950
+  
+            border border-gray-200 dark:border-gray-800
+  
+            rounded-3xl
+  
+            p-6
+  
+            shadow-sm
+          ">
+
+              <h2 className="
+              text-lg font-semibold mb-6
+            ">
+                Resumen
+              </h2>
+
+              <div className="space-y-4">
+
+                <div className="
+                flex items-center justify-between
+                text-sm
+              ">
+                  <span className="text-gray-500">
+                    Subtotal
+                  </span>
+
+                  <span className="font-medium">
+                    ${subtotal.toLocaleString()}
+                  </span>
+                </div>
+
+                <div className="
+                flex items-center justify-between
+                text-sm
+              ">
+                  <span className="text-gray-500">
+                    IVA
+                  </span>
+
+                  <span className="font-medium">
+                    ${iva.toLocaleString()}
+                  </span>
+                </div>
+
+                <div className="
+                border-t border-gray-200
+                dark:border-gray-800
+                pt-4
+              ">
+
+                  <div className="
+                  flex items-center justify-between
+                ">
+
+                    <span className="
+                    text-lg font-semibold
+                  ">
+                      Total
+                    </span>
+
+                    <span className="
+                    text-2xl font-bold
+                  ">
+                      ${total.toLocaleString()}
+                    </span>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+              <button
+                disabled={guardando}
+                onClick={guardarFactura}
+                className="
+                mt-8
+  
+                w-full h-12
+  
+                rounded-2xl
+  
+                bg-amber-400
+                hover:bg-amber-300
+  
+                text-slate-900
+  
+                font-semibold
+  
+                transition-all
+              "
+              >
+
+                {guardando
+                  ? "Guardando..."
+                  : "Guardar factura"
+                }
+
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
       </div>
     </div>
+
   );
 }
