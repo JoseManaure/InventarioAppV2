@@ -223,8 +223,19 @@ mongoose
 
 const PORT = process.env.PORT || 5001;
 
-console.log('PORT de Railway:', process.env.PORT);
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log('✅ MongoDB conectado');
 
-app.listen(PORT, () => {
-  console.log(`🚀 API corriendo en puerto ${PORT}`);
-});
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log('PORT de Railway:', process.env.PORT);
+      console.log(`🚀 API corriendo en puerto ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('❌ Error MongoDB:', err);
+    process.exit(1);
+  });
+
+
