@@ -9,7 +9,11 @@ async function obtenerNuevoCorrelativoSeguro(tipo) {
   const result = await Contador.findOneAndUpdate(
     { nombre: tipo },
     { $inc: { valor: 1 } },
-    { new: true, upsert: true }
+    {
+      new: true,
+      upsert: true,
+      setDefaultsOnInsert: true
+    }
   );
 
   return result.valor;

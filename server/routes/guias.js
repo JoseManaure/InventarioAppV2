@@ -53,11 +53,11 @@ function crearPDFGuia(guia, nota, outputPath) {
     }
 
     // --- Datos empresa ---
-    doc.fontSize(10).font("Helvetica-Bold").text("COMERCIAL RASIVA SpA.", 100, 20);
-    doc.font("Helvetica").text("RUT: 77 143 635-8", 100, 28);
-    doc.text("Servicios de Ingeniería, Compra y Venta de materiales", 100, 36);
+    doc.fontSize(10).font("Helvetica-Bold").text("Sergio Silva Leal.", 100, 20);
+    doc.font("Helvetica").text("RUT: 5 586 794-1", 100, 28);
+    doc.text("Compra y Venta de Aridos y Materiales de Construccion", 100, 36);
     doc.text("Construcción y Transportes.", 100, 44);
-    doc.text("Fono: (02) Cel. 9 6240 1457 - 9 5649 6112", 100, 52);
+    doc.text("Fono: (+56) Cel. 9 5411 1065 - 9 3758 9348", 100, 52);
     doc.text("Dirección: Balmaceda N°01091, Malloco - Peñaflor", 100, 60);
 
     // --- Título ---
@@ -112,7 +112,7 @@ function crearPDFGuia(guia, nota, outputPath) {
     const tableHeader = ["#", "Producto", "Cant.", "Precio Unit.", "Total"];
 
     doc.font("Helvetica-Bold");
-    tableHeader.forEach((h, i) => doc.text(h, 36 + columnWidths.slice(0, i).reduce((a,b)=>a+b,0), y));
+    tableHeader.forEach((h, i) => doc.text(h, 36 + columnWidths.slice(0, i).reduce((a, b) => a + b, 0), y));
     y += 20;
     doc.font("Helvetica");
 
@@ -124,7 +124,7 @@ function crearPDFGuia(guia, nota, outputPath) {
       subtotal += totalLinea;
 
       if (index % 2 === 0) {
-        doc.rect(36, y-2, columnWidths.reduce((a,b)=>a+b,0), 18).fill("#EBF5FF").fillColor("black");
+        doc.rect(36, y - 2, columnWidths.reduce((a, b) => a + b, 0), 18).fill("#EBF5FF").fillColor("black");
       }
 
       const row = [
@@ -136,7 +136,7 @@ function crearPDFGuia(guia, nota, outputPath) {
       ];
 
       row.forEach((txt, i) => {
-        let x = 36 + columnWidths.slice(0, i).reduce((a,b)=>a+b,0);
+        let x = 36 + columnWidths.slice(0, i).reduce((a, b) => a + b, 0);
         let align = (i >= 3) ? "right" : "left";
         doc.text(txt, x, y, { width: columnWidths[i], align });
       });
@@ -168,10 +168,10 @@ function crearPDFGuia(guia, nota, outputPath) {
     y += 30;
     doc.font("Helvetica-Bold").fillColor("red").text("Transferir a:", 36, y);
     doc.fillColor("black").font("Helvetica");
-    doc.text("Comercial Rasiva SpA", 36, y + 10);
-    doc.text("Cta.Vista N°21670187273 Bco.Estado", 36, y + 20);
-    doc.text("Rut. 77 143 635-8", 36, y + 30);
-    doc.fillColor("blue").text("comercialrasiva@gmail.com", 36, y + 40, { link: "mailto:comercialrasiva@gmail.com" });
+    doc.text("Sergio Silva Leal", 36, y + 10);
+    doc.text("Cheq Electronica N°3557 0328 261 Bco.Estado", 36, y + 20);
+    doc.text("Rut. 5 586 794-1", 36, y + 30);
+    doc.fillColor("blue").text("silvalealsergio@gmail.com", 36, y + 40, { link: "mailto:comercialrasiva@gmail.com" });
 
     doc.end();
     stream.on("finish", resolve);
@@ -288,26 +288,21 @@ router.post("/", verifyToken, async (req, res) => {
       estado: "pendiente",
     });
 
-    
+
 
     // 2️⃣ Rebajar stock y comprometidos
     for (const p of productosValidados) {
-      const item = await Item.findById(p.itemId);
-      if (!item) continue;
-
-      item.cantidad = Math.max(Number(item.cantidad || 0) - p.cantidad, 0);
-
-      let pendiente = p.cantidad;
-      item.comprometidos = (item.comprometidos || []).map(c => {
-        if (String(c.cotizacionId) !== String(nota._id)) return c;
-        if (pendiente <= 0) return c;
-        const consumir = Math.min(Number(c.cantidad || 0), pendiente);
-        c.cantidad -= consumir;
-        pendiente -= consumir;
-        return c;
-      }).filter(c => Number(c.cantidad) > 0);
-
-      await item.save();
+      await Item.updateOne(
+        { _id: p.itemId },
+        {
+          $inc: { cantidad: -p.cantidad },
+          $pull: {
+            comprometidos: {
+              cotizacionId: nota._id
+            }
+          }
+        }
+      );
     }
 
     // 3️⃣ Generar PDF
@@ -345,17 +340,19 @@ router.delete("/:id", verifyToken, async (req, res) => {
 
     // Revertir stock
     for (const p of guia.productos) {
-      const item = await Item.findById(p.itemId);
-      if (!item) continue;
-      item.cantidad += Number(p.cantidad || 0);
-
-      item.comprometidos.push({
-        cantidad: p.cantidad,
-        hasta: new Date(),
-        cotizacionId: guia.notaId,
-      });
-
-      await item.save();
+      await Item.updateOne(
+        { _id: p.itemId },
+        {
+          $inc: { cantidad: p.cantidad },
+          $push: {
+            comprometidos: {
+              cantidad: p.cantidad,
+              hasta: new Date(),
+              cotizacionId: guia.notaId,
+            }
+          }
+        }
+      );
     }
 
     if (guia.pdfPath) {

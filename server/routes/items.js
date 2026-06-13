@@ -1,60 +1,66 @@
 const express = require('express');
 const router = express.Router();
 const Item = require('../models/Item');
-const verifyToken = require('../middleware/auth');
-
+const verifyToken = require('../middleware/verifyToken');
+const requireAdmin =
+  require('../middleware/requireAdmin.js');
 // Crear o actualizar item
-router.post('/', verifyToken, async (req, res) => {
-  const { nombre, cantidad, precio, fecha, comprometidos, codigo, costo } = req.body;
 
-  try {
+router.post(
+  '/',
+  verifyToken,
+  requireAdmin,
+  async (req, res) => {
+    const { nombre, cantidad, precio, fecha, comprometidos, codigo, costo } = req.body;
+
+    try {
       if (req.body.modo === 'catalogo') {
-    req.body.cantidad = 0; // siempre stock inicial en 0
+        req.body.cantidad = 0; // siempre stock inicial en 0
+      }
+      let existente;
+
+      if (codigo) {
+        existente = await Item.findOne({ codigo });
+      }
+      if (!existente) {
+        existente = await Item.findOne({ nombre });
+      }
+
+
+
+      let mensaje = '';
+
+      if (existente) {
+        existente.cantidad += cantidad;
+        existente.precio = precio;
+        existente.fecha = new Date(fecha);
+        existente.modificadoPor = req.user.id;
+        existente.costo = costo ?? existente.costo;
+        if (codigo) existente.codigo = codigo;
+        await existente.save();
+        mensaje = '📝 Actualizado';
+        return res.status(200).json({ ...existente.toObject(), _mensaje: mensaje });
+      } else {
+        const nuevoItem = new Item({
+          nombre,
+          cantidad,
+          precio,
+          fecha: new Date(fecha),
+          costo,
+          modificadoPor: req.user.id,
+          comprometidos,
+          codigo
+        });
+
+        await nuevoItem.save();
+        mensaje = '📦 Creado';
+        return res.status(201).json({ ...nuevoItem.toObject(), _mensaje: mensaje });
+      }
+    } catch (err) {
+      console.error('❌ Error al crear o actualizar item:', err);
+      return res.status(500).json({ error: 'Error al crear o actualizar item' });
     }
-    let existente;
-
-    if (codigo) {
-      existente = await Item.findOne({ codigo });
-    }
-    if (!existente) {
-      existente = await Item.findOne({ nombre });
-    }
-
-    
-
-    let mensaje = '';
-
-    if (existente) {
-      existente.cantidad += cantidad;
-      existente.precio = precio;
-      existente.fecha = new Date(fecha);
-      existente.modificadoPor = req.user;
-      existente.costo = costo ?? existente.costo;
-      if (codigo) existente.codigo = codigo;
-      await existente.save();
-      mensaje = '📝 Actualizado';
-      return res.status(200).json({ ...existente.toObject(), _mensaje: mensaje });
-    } else {
-      const nuevoItem = new Item({
-        nombre,
-        cantidad,
-        precio,
-        fecha: new Date(fecha),
-        costo,
-        modificadoPor: req.user,
-        comprometidos,
-        codigo
-      });
-
-      await nuevoItem.save();
-      mensaje = '📦 Creado';
-      return res.status(201).json({ ...nuevoItem.toObject(), _mensaje: mensaje });
-    }
-  } catch (err) {
-    console.error('❌ Error al crear o actualizar item:', err);
-    return res.status(500).json({ error: 'Error al crear o actualizar item' });
-  }
-});
+  });
 
 // Obtener inventario con search + paginación
 router.get('/', verifyToken, async (req, res) => {
@@ -63,23 +69,34 @@ router.get('/', verifyToken, async (req, res) => {
 
     const filtros = {};
     if (search) {
-      const regex = new RegExp(search, 'i'); 
+      const regex = new RegExp(search, 'i');
       filtros.$or = [{ nombre: regex }, { codigo: regex }];
     }
 
-    const skip = (Number(page) - 1) * Number(limit);
+    const safeLimit = Math.min(
+      Number(limit) || 20,
+      100
+    );
+
+    const safePage = Math.max(
+      Number(page) || 1,
+      1
+    );
+
+    const skip =
+      (safePage - 1) * safeLimit;
 
     const [items, total] = await Promise.all([
       Item.find(filtros)
         .select('nombre precio codigo costo cantidad comprometidos ')
         .populate('modificadoPor', 'name email')
         .skip(skip)
-        .limit(Number(limit))
+        .limit(safeLimit)
         .sort({ nombre: 1 }),
       Item.countDocuments(filtros)
     ]);
 
-    res.json({ items, total, page: Number(page), pages: Math.ceil(total / Number(limit)) });
+    res.json({ items, total, page: safePage, pages: Math.ceil(total / safeLimit) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener los productos' });

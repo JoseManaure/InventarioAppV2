@@ -1,14 +1,18 @@
 const mongoose = require('mongoose');
 
 const itemSchema = new mongoose.Schema({
-  
+
   nombre: String,
   cantidad: Number,
   fecha: Date,
   precio: Number,
   costo: Number,
   codigo: String, // no pongas unique aquí, lo pondremos abajo con .index()
-
+  unidad: {
+    type: String,
+    enum: ['unidad', 'm3', 'tonelada', 'metro_lineal'],
+    default: 'unidad'
+  },
   modificadoPor: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const Quote = require('../models/Quote');
 const Item = require('../models/Item');
-const verifyToken = require('../middleware/auth');
+const verifyToken = require('../middleware/verifyToken');
 
 router.post('/', verifyToken, async (req, res) => {
   try {

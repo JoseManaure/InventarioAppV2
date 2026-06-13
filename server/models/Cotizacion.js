@@ -8,6 +8,10 @@ const CotizacionSchema = new mongoose.Schema(
     fechaHoy: { type: String },
     fechaEntrega: { type: String },
     metodoPago: { type: String, trim: true },
+    recibidoPor: {
+      type: String,
+      default: ''
+    },
     rutCliente: { type: String, trim: true },
     giroCliente: { type: String, trim: true },
     direccionCliente: { type: String, trim: true },
@@ -16,7 +20,6 @@ const CotizacionSchema = new mongoose.Schema(
     atencion: { type: String, trim: true },
     emailCliente: { type: String, trim: true },
     telefonoCliente: { type: String, trim: true },
-
     tipo: {
       type: String,
       enum: ['cotizacion', 'nota'],
@@ -32,18 +35,43 @@ const CotizacionSchema = new mongoose.Schema(
       type: String,
       default: 'Esta cotización es aceptada después de cancelado el 65%.',
     },
+    yaConvertida: {
+      type: Boolean,
+      default: false
+    },
+
+    fechaConversion: {
+      type: Date,
+      default: null
+    },
+
+    notaGeneradaId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Cotizacion',
+      default: null
+    },
 
     productos: [
       {
         itemId: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: 'Item',
+          ref: 'Item'
         },
-        nombre: { type: String, trim: true },
-        cantidad: { type: Number, default: 0 },
-        precio: { type: Number, default: 0 },
-        total: { type: Number, required: true },
-      },
+
+        codigo: String,
+
+        unidad: {
+          type: String,
+          enum: ['unidad', 'm3', 'tonelada', 'metro_lineal'],
+          default: 'unidad'
+        },
+
+        nombre: String,
+        cantidad: Number,
+        precio: Number,
+        costo: Number,
+        total: Number
+      }
     ],
 
     anulada: { type: Date, default: null },
@@ -55,6 +83,15 @@ const CotizacionSchema = new mongoose.Schema(
     },
 
     pdfUrl: { type: String, trim: true },
+    subtotal: {
+      type: Number,
+      default: 0
+    },
+
+    iva: {
+      type: Number,
+      default: 0
+    },
     total: { type: Number, required: true },
 
     numero: { type: Number }, // 👈 quitamos unique para evitar conflictos
@@ -65,6 +102,11 @@ const CotizacionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Cotizacion',
       default: null,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
     },
   },
   {

@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Ruta logo base64
-const logoPath = path.join(__dirname, '../assets/logo rasiva.png');
+const logoPath = path.join(__dirname, '../../client/src/assets/logo-rasiva.png');
 const logoBase64 = fs.existsSync(logoPath)
   ? fs.readFileSync(logoPath, 'base64')
   : null;
@@ -12,20 +12,28 @@ const logoBase64 = fs.existsSync(logoPath)
 function generarGuiaPDF(cliente, productos, extras) {
   const doc = new jsPDF();
   const fechaHoy = new Date().toLocaleDateString('es-CL');
-  const numero = extras.numeroDocumento || 'N°000000';
-
+  const numero =
+    extras.numero ||
+    extras.numeroDocumento ||
+    '000000';
+  const unidadBonita = {
+    unidad: 'Un.',
+    m3: 'm³',
+    tonelada: 'Ton.',
+    metro_lineal: 'M.L.'
+  };
   if (logoBase64) {
     doc.addImage(logoBase64, 'PNG', 10, 10, 30, 30);
   }
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('COMERCIAL RASIVA SpA.', 45, 15);
+  doc.text('Sergio Silva Leal.', 45, 15);
   doc.setFont('helvetica', 'normal');
   doc.text('RUT: 77 143 635-8', 45, 20);
-  doc.text('Servicios de Ingeniería, Compra y Venta de materiales', 45, 25);
+  doc.text('Compra y Venta de Aridos y materiales de construccion', 45, 25);
   doc.text('Construcción y Transportes.', 45, 30);
-  doc.text('Fono: (02)    Cel. 9 6240 1457 - 9 5649 6112', 45, 35);
+  doc.text("Fono: (02) Cel. 9 5411 1065 - 9 3758 9348", 45, 35);
   doc.text('Dirección: Balmaceda N°01091, Malloco - Peñaflor', 45, 40);
 
   let tituloPDF = 'Documento';
@@ -39,30 +47,30 @@ function generarGuiaPDF(cliente, productos, extras) {
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`N - 000${numero}`, 160, 55);
+  doc.text(`N° ${String(numero).padStart(6, '0')}`, 160, 55);
   doc.text(`Fecha: ${fechaHoy}`, 160, 60);
 
-    // Datos cliente en dos columnas
-    const datosIzquierda = [
-      ['Cliente:', cliente],
-      ['RUT:', extras.rutCliente || '__________________'],
-      ['Giro:', extras.giroCliente || '__________________'],
-      ['Direccion:', extras.direccionCliente || '__________________'],
-      ['Comuna:', extras.comunaCliente || '__________________'],
-      ['Ciudad:', extras.ciudadCliente || 'Santiago'],
-      ['Mail:', extras.emailCliente || '__________________'],
-    ];
-  
-    const datosDerecha = [
-      ['At. Sr.:', extras.atencion || '__________________'],
-      ['Válida:', '3 días'],
-      ['Dirección:', extras.direccion || '__________________'],
-      ['Cel.:', extras.telefonoCliente || ''],
-      ['Entrega:', extras.fechaEntrega || 'Por definir'],
-      ['Pago:', extras.metodoPago || 'Contado'],
-      [' ', ' ']
-    ];
-    
+  // Datos cliente en dos columnas
+  const datosIzquierda = [
+    ['Cliente:', cliente],
+    ['RUT:', extras.rutCliente || '__________________'],
+    ['Giro:', extras.giroCliente || '__________________'],
+    ['Direccion:', extras.direccionCliente || '__________________'],
+    ['Comuna:', extras.comunaCliente || '__________________'],
+    ['Ciudad:', extras.ciudadCliente || 'Santiago'],
+    ['Mail:', extras.emailCliente || '__________________'],
+  ];
+
+  const datosDerecha = [
+    ['At. Sr.:', extras.atencion || '__________________'],
+    ['Válida:', '3 días'],
+    ['Dirección:', extras.direccion || '__________________'],
+    ['Cel.:', extras.telefonoCliente || ''],
+    ['Entrega:', extras.fechaEntrega || 'Por definir'],
+    ['Pago:', extras.metodoPago || 'Contado'],
+    [' ', ' ']
+  ];
+
 
   let yCliente = 70;
   for (let i = 0; i < datosIzquierda.length; i++) {
@@ -84,19 +92,24 @@ function generarGuiaPDF(cliente, productos, extras) {
 
   doc.autoTable({
     startY: yCliente + 5,
-    head: [['Item', 'Cant.', 'Descripción', 'Valor Unit.', 'Total']],
-    body: productos.map((p, i) => [
-      `${i + 1}°`,
-      p.cantidad,
+    head: [['Código', 'Cant.', 'Unidad', 'Descripción', 'Valor Unit.', 'Total']],
+    body: productos.map((p) => [
+      p.codigo || '---',
+      Number(p.cantidad).toLocaleString('es-CL'),
+      unidadBonita[p.unidad] || p.unidad || 'Un.',
       p.nombre,
-      `$${p.precio.toLocaleString('es-CL')}`,
-      `$${p.total.toLocaleString('es-CL')}`,
+      `$${Number(p.precio).toLocaleString('es-CL')}`,
+      `$${Number(p.total).toLocaleString('es-CL')}`,
     ]),
     styles: { fontSize: 9, halign: 'center' },
     headStyles: { fillColor: [230, 230, 230] },
     columnStyles: {
-      3: { halign: 'left' },
-      4: { halign: 'right' },
+      0: { halign: 'center' }, // código
+      1: { halign: 'center' }, // cantidad
+      2: { halign: 'center' }, // unidad
+      3: { halign: 'left' },   // descripción
+      4: { halign: 'right' },  // precio
+      5: { halign: 'right' },  // total
     },
   });
 
@@ -136,12 +149,12 @@ function generarGuiaPDF(cliente, productos, extras) {
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(0, 0, 0);
-  doc.text('Comercial Rasiva SpA', 10, yNotas + 6);
-  doc.text('Cta.Vista N°21670187273 Bco.Estado', 10, yNotas + 12);
-  doc.text('Rut. 77 143 635-8', 10, yNotas + 18);
+  doc.text('Sergio Silva Leal', 10, yNotas + 6);
+  doc.text('Cheq Electronica N°3557 0328 261 Bco.Estado', 10, yNotas + 12);
+  doc.text('Rut. 5 586 794-1', 10, yNotas + 18);
   doc.setTextColor(0, 0, 255);
-  doc.textWithLink('comercialrasiva@gmail.com', 10, yNotas + 24, {
-    url: 'mailto:comercialrasiva@gmail.com',
+  doc.textWithLink('silvalealsergio@gmail.com', 10, yNotas + 24, {
+    url: 'mailto:silvalealsergio@gmail.com',
   });
 
   return Buffer.from(doc.output('arraybuffer'));

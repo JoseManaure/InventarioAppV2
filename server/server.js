@@ -4,7 +4,8 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-
+const verifyToken = require('./middleware/verifyToken');
+const requireAdmin = require('./middleware/requireAdmin');
 dotenv.config();
 
 const app = express();
@@ -13,10 +14,11 @@ const app = express();
    CORS CORREGIDO PARA VERCEL + LOCALHOST + RAILWAY
 ================================================== */
 const allowedOrigins = [
-  "http://localhost:5173",
+  "http://localhost:5174",
   "http://localhost:3000",
+  "http://127.0.0.1:8001",
   "https://inventario-app-woad.vercel.app",
-  "https://inventario-7odk36gf8-joses-projects-e0239e45.vercel.app"
+  "https://inventario-ncuxjknoc-joses-projects-e0239e45.vercel.app"
 ];
 
 const corsOptions = {
@@ -32,14 +34,10 @@ const corsOptions = {
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
+
 };
 
-app.use(cors({
-  origin: true,
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+app.use(cors(corsOptions));
 
 
 // JSON
@@ -58,11 +56,11 @@ app.get('/api/test', (_req, res) => {
 });
 
 app.use('/api/auth', require('./routes/auth'));
-
+app.use('/api/dte', require('./routes/dte'));
 /* ==================================================
    RUTAS
 ================================================== */
-/*
+
 app.use('/api/items', require('./routes/items'));
 app.use('/api/comparador', require('./routes/comparador'));
 app.use('/api/comparar-precios', require('./routes/comparar-precios'));
@@ -72,7 +70,33 @@ app.use('/api/chat', require('./routes/chat'));
 app.use('/api/pagos', require('./routes/pagos'));
 app.use('/api/guias', require('./routes/guias'));
 app.use('/api/llama', require('./routes/llama'));
-================================================== */
+app.use('/api/dashboard', require('./routes/dashboard'));
+app.use(
+  '/api/users',
+  require('./routes/users')
+);
+const generarBoletaXML =
+  require('./sii/dte/generarBoletaXML');
+
+app.get('/api/test-xml', async (req, res) => {
+
+  const xml = generarBoletaXML({
+    folio: 1,
+    rutEmpresa: '76XXXXXX-X',
+    razonSocial: 'MMD SPA',
+    rutCliente: '11.111.111-1',
+    cliente: 'Cliente Test',
+    total: 25000
+  });
+
+  res.type('application/xml');
+  res.send(xml);
+});
+
+console.log("🔥 ESTE ES MI SERVER REAL");
+app.delete('/api/test-delete', (req, res) => {
+  res.send('DELETE funciona');
+});
 
 /* ==================================================
    MULTER PDFS
@@ -91,7 +115,25 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+
+  limits: {
+    fileSize: 10 * 1024 * 1024
+  },
+
+  fileFilter: (_req, file, cb) => {
+
+    if (file.mimetype !== 'application/pdf') {
+
+      return cb(
+        new Error('Solo se permiten PDFs')
+      );
+    }
+
+    cb(null, true);
+  }
+});
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -104,6 +146,7 @@ const Cotizacion = require('./models/Cotizacion');
 
 app.post(
   '/api/cotizaciones/upload-pdf',
+  verifyToken,
   upload.single('file'),
   async (req, res) => {
     try {
@@ -147,12 +190,30 @@ app.post(
   }
 );
 
+app.use((err, req, res, next) => {
+
+  if (err instanceof multer.MulterError) {
+
+    return res.status(400).json({
+      error: err.message
+    });
+  }
+
+  if (err.message === 'Solo se permiten archivos PDF') {
+
+    return res.status(400).json({
+      error: err.message
+    });
+  }
+
+  next(err);
+});
 /* ==================================================
    DB
 ================================================== */
 
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect(process.env.local.MONGO_URI)
   .then(() => console.log('✅ MongoDB conectado'))
   .catch((err) => console.error('❌ Error MongoDB:', err));
 
@@ -160,7 +221,7 @@ mongoose
    START
 ================================================== */
 
-const PORT = process.env.PORT || 5000;
+const PORT = 5001;
 
 app.listen(PORT, () => {
   console.log(`🚀 API corriendo en puerto ${PORT}`);

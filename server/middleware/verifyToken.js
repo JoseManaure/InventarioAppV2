@@ -1,18 +1,40 @@
-// middleware/verifyToken.js
 const jwt = require('jsonwebtoken');
 
-const verifyToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+function verifyToken(req, res, next) {
 
-  if (!token) return res.status(401).json({ message: 'Token requerido' });
+  const authHeader = req.headers.authorization;
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(403).json({ message: 'Token inválido' });
+  if (!authHeader) {
+    return res.status(401).json({
+      error: 'Token requerido'
+    });
+  }
 
-    req.user = decoded; // decoded = { id: ..., iat: ..., exp: ... }
+  const token = authHeader.startsWith('Bearer ')
+    ? authHeader.split(' ')[1]
+    : authHeader;
+
+  try {
+
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET
+    );
+    console.log('JWT:', decoded);
+
+    req.user = {
+      id: decoded.id,
+      role: decoded.role
+    };
+
     next();
-  });
-};
+
+  } catch (error) {
+
+    return res.status(401).json({
+      error: 'Token inválido'
+    });
+  }
+}
 
 module.exports = verifyToken;
