@@ -17,8 +17,12 @@ const allowedOrigins = [
   "http://localhost:5174",
   "http://localhost:3000",
   "http://127.0.0.1:8001",
+
   "https://inventario-app-woad.vercel.app",
-  "https://inventario-ncuxjknoc-joses-projects-e0239e45.vercel.app"
+  "https://inventario-ncuxjknoc-joses-projects-e0239e45.vercel.app",
+
+  // NUEVA URL
+  "https://inventario-dsg3ykta7-joses-projects-e0239e45.vercel.app"
 ];
 
 const corsOptions = {
