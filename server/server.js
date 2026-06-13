@@ -223,6 +223,8 @@ mongoose
 
 const PORT = process.env.PORT || 5001;
 
+console.log('PORT de Railway:', process.env.PORT);
+
 app.listen(PORT, () => {
   console.log(`🚀 API corriendo en puerto ${PORT}`);
 });
