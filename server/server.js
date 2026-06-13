@@ -213,7 +213,7 @@ app.use((err, req, res, next) => {
 ================================================== */
 
 mongoose
-  .connect(process.env.local.MONGO_URI)
+  .connect(process.env.MONGO_URI)
   .then(() => console.log('✅ MongoDB conectado'))
   .catch((err) => console.error('❌ Error MongoDB:', err));
 
