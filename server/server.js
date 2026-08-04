@@ -6,7 +6,16 @@ const multer = require('multer');
 const path = require('path');
 const verifyToken = require('./middleware/verifyToken');
 const requireAdmin = require('./middleware/requireAdmin');
+const empresaRoutes = require("./routes/empresaRoutes");
+const proveedoresRoutes = require("./routes/proveedores");
+const clientesRoutes = require("./routes/clientes");
+const certificadosRoutes = require("./routes/certificados");
+const { generarBoletaXML } = require("./sii_v2/dte/generarBoletaXML");
+const iniciarSII = require("./sii_v2");
+const cafRoutes =
+  require("./routes/caf");
 dotenv.config();
+
 
 const app = express();
 
@@ -14,14 +23,14 @@ const app = express();
    CORS CORREGIDO PARA VERCEL + LOCALHOST + RAILWAY
 ================================================== */
 const allowedOrigins = [
-  "http://localhost:5174",
+  "http://localhost:5173",
   "http://localhost:3000",
+  "http://127.0.0.1:8000", // ← AGREGAR
+  "http://localhost:8000", // ← recomendable también
   "http://127.0.0.1:8001",
 
   "https://inventario-app-woad.vercel.app",
   "https://inventario-ncuxjknoc-joses-projects-e0239e45.vercel.app",
-
-  // NUEVA URL
   "https://inventario-dsg3ykta7-joses-projects-e0239e45.vercel.app"
 ];
 
@@ -61,6 +70,7 @@ app.get('/api/test', (_req, res) => {
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/dte', require('./routes/dte'));
+app.use('/api/sii', require('./routes/sii'));
 /* ==================================================
    RUTAS
 ================================================== */
@@ -79,12 +89,18 @@ app.use(
   '/api/users',
   require('./routes/users')
 );
-const generarBoletaXML =
-  require('./sii/dte/generarBoletaXML');
+app.use(
+  "/api/certificados",
+  certificadosRoutes
+);
+app.use(
+  "/api/caf",
+  cafRoutes
+);
+
 
 app.get('/api/test-xml', async (req, res) => {
-
-  const xml = generarBoletaXML({
+  const xml = generarXMLBoleta({
     folio: 1,
     rutEmpresa: '76XXXXXX-X',
     razonSocial: 'MMD SPA',
@@ -138,10 +154,11 @@ const upload = multer({
     cb(null, true);
   }
 });
-
+app.use("/api/empresas", empresaRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
-
+app.use("/api/proveedores", proveedoresRoutes);
+app.use("/api/clientes", clientesRoutes);
 /* ==================================================
    SUBIR PDF
 ================================================== */
@@ -212,14 +229,6 @@ app.use((err, req, res, next) => {
 
   next(err);
 });
-/* ==================================================
-   DB
-================================================== */
-
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log('✅ MongoDB conectado'))
-  .catch((err) => console.error('❌ Error MongoDB:', err));
 
 /* ==================================================
    START
@@ -231,7 +240,7 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB conectado');
-
+    iniciarSII();
     app.listen(PORT, '0.0.0.0', () => {
       console.log('PORT de Railway:', process.env.PORT);
       console.log(`🚀 API corriendo en puerto ${PORT}`);
@@ -241,5 +250,14 @@ mongoose
     console.error('❌ Error MongoDB:', err);
     process.exit(1);
   });
+
+mongoose.connection.once("open", () => {
+  console.log("================================");
+  console.log("DATABASE:", mongoose.connection.name);
+  console.log("HOST:", mongoose.connection.host);
+  console.log("================================");
+});
+
+
 
 

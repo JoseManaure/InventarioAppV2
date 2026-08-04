@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<DTE xmlns="http://www.sii.cl/SiiDte" version="1.0">
+  <Documento ID="F77T39">
+    <Encabezado>
+      <IdDoc>
+        <TipoDTE>39</TipoDTE>
+        <Folio>77</Folio>
+        <FchEmis>2026-07-22</FchEmis>
+      </IdDoc>
+      <Emisor>
+        <RUTEmisor>5586794-1</RUTEmisor>
+        <RznSoc>Aridos MMD SPA</RznSoc>
+        <GiroEmis>servicios y venta de aridos</GiroEmis>
+        <DirOrigen>balmaceda 01091,penaflor</DirOrigen>
+        <CmnaOrigen>penaflor</CmnaOrigen>
+        <CiudadOrigen>santiago</CiudadOrigen>
+      </Emisor>
+      <Receptor>
+        <RUTRecep>11111111-1</RUTRecep>
+        <RznSocRecep>Cliente Prueba</RznSocRecep>
+      </Receptor>
+      <Totales>
+        <MntNeto>20000</MntNeto>
+        <IVA>3800</IVA>
+        <MntTotal>23800</MntTotal>
+      </Totales>
+    </Encabezado>
+    <Detalle>
+      <NroLinDet>1</NroLinDet>
+      <NmbItem>Arena</NmbItem>
+      <QtyItem>2</QtyItem>
+      <PrcItem>10000</PrcItem>
+      <MontoItem>20000</MontoItem>
+    </Detalle>
+  
+<TED version="1.0">
+    <DD>
+        <RE>5586794-1</RE>
+        <TD>39</TD>
+        <F>77</F>
+        <FE>2026-07-22</FE>
+        <RR>11111111-1</RR>
+        <RSR>Cliente Prueba</RSR>
+        <MNT>23800</MNT>
+        <IT1>Arena</IT1>
+    </DD>
+
+    <FRMT algoritmo="SHA1withRSA">
+        9HTEK5s5x+FF9TbV4R1G/1vp6bc=
+    </FRMT>
+</TED>
+
+</Documento>
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#F77T39"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>aIs0bnz9RzSZJqyS52mhKNfMBHw=</DigestValue></Reference></SignedInfo><SignatureValue>qjTQdrLnmuV0mY5RQSBHEf3/yaiEGOmZEDnWq4N6iMriWVEnAkh11HDUSC/54GkEL4lWQEy3CZSPWgHIXcABlFxDRx5k36vBFXlbUzK63dv6LNSlpZNzyqkB4rPb5Dz2Rw/ZvwauwY9ckBBOu6ZBjOeZv90/OfOvaxR8KhA1jd9zvebV19wNsZGWMRMkWJddumRlXY/GeibIoFANxLyViNLPig9fm1v68nyHT8WmWPmUUjSGMndVo1WzNFEhM1cuZKJE+5JoSRo7t5XApocL8MoL1cuSeMtPyyKsDVQWjpPc/5SdHPw+FLJw6/ZlBm2EPsVToUKY94POUkQAAqzxww==</SignatureValue><KeyInfo><X509Data>
+<X509Certificate>MIID0zCCArugAwIBAgIUH59Szn08k/ABotyRjhPTospLDPAwDQYJKoZIhvcNAQELBQAweTELMAkGA1UEBhMCQ0wxFzAVBgNVBAgMDkFyaWRvcyBNTUQgU1BBMRcwFQYDVQQKDA5Bcmlkb3MgTU1EIFNQQTETMBEGA1UEAwwKQXJpZG9zIE1NRDEjMCEGCSqGSIb3DQEJARYUam1hbmF1cmU4N0BnbWFpbC5jb20wHhcNMjYwNzE5MDEyNDI1WhcNMjcwNzE5MDEyNDI1WjB5MQswCQYDVQQGEwJDTDEXMBUGA1UECAwOQXJpZG9zIE1NRCBTUEExFzAVBgNVBAoMDkFyaWRvcyBNTUQgU1BBMRMwEQYDVQQDDApBcmlkb3MgTU1EMSMwIQYJKoZIhvcNAQkBFhRqbWFuYXVyZTg3QGdtYWlsLmNvbTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMQBOXNlObEqO+09gjpOgq8tyIEKPd44EFYhAAySdnQnqXjG4cT10Vz0SiF/YHKGAhhC0Ls2n6WdkIUDTjcYL0xQlpaAcqengaBW3WA2Z64Xm96FqyI8o0vkaZWfzTOW1jhG1VGWIVCm/Lh1wsSP6R7EUN0EfFRvrbWD570J+PdE5zHIRd3ROEgHNlwz64REP0C/3kFt6h9KWPjWpw9kEjh5+WbxgC8gpnzxe28k4JTjeSYoQxMt+S43mKA/MSIKMcBNZNxOiGsZ0rWi7d8jRkSMbUXmSVeKINnDXFnFyXs+v5YGm/KdXrch6th7e6dKk6jQxkUTVEToBSrfqVfzAV0CAwEAAaNTMFEwHQYDVR0OBBYEFNPQHtV3falGgTWHtTt5BBFBhaEpMB8GA1UdIwQYMBaAFNPQHtV3falGgTWHtTt5BBFBhaEpMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAH2EcrJjr2uhO0YGb9YuDpOzQmu7XE06fnK0kI1iuf/+q1f/Fw15UDtDvJI1CXRGBkq4JY2mUzhvZGDnDy3y6UoDATwMCr6mb8dZ6eLw/D49utjdx/0+z8V/QbxgYXSmRGS1IBERgtWFT2XFYv7clue/+424WJA5i/yZ9VuTDkDajsLnqWwyugrYInJtfdkVmx38bw5t2L1xa0pXbo4NP1qZ6WK6M69I+LcMz8SNNmseg2qKhjzCYM+C9MhT09LjWDQ5GH/m5wfyqx9rvf0le2vyxi0gPwII2n+mHGPkJ2XZUvjpSW726LRu26Cdq0cV5+zKaEo1d8aNfnkKQ00rOpI=</X509Certificate>
+</X509Data></KeyInfo></Signature></DTE>

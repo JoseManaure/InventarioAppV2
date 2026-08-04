@@ -13,17 +13,32 @@ import api from '../api/api';
 import { generarGuiaPDF } from '../utils/pdf';
 
 interface Producto {
-  itemId: string;
+  itemId: string | {
+    _id: string;
+    nombre: string;
+  };
+
   nombre: string;
   cantidad: number;
   precio: number;
   total: number;
 }
 
+interface Cliente {
+  _id: string;
+  nombre: string;
+  rut?: string;
+  direccion?: string;
+  comuna?: string;
+  ciudad?: string;
+  telefono?: string;
+  email?: string;
+  giro?: string;
+}
 interface Cotizacion {
   total: number;
   _id: string;
-  cliente: string;
+  cliente: Cliente | null;
   direccion: string;
   fechaHoy: string;
   fechaEntrega: string;
@@ -36,6 +51,13 @@ interface Cotizacion {
   tipoDocumento?: string;
 }
 
+
+interface Cotizacion {
+  total: number;
+  _id: string;
+  cliente: Cliente | null;
+
+}
 export default function VerCotizaciones() {
   const [cotizaciones, setCotizaciones] = useState<Cotizacion[]>([]);
   const [menuAbierto, setMenuAbierto] = useState<string | null>(null);
@@ -50,6 +72,15 @@ export default function VerCotizaciones() {
         const res = await api.get('/cotizaciones');
         const soloCotizaciones = res.data.filter(
           (c: Cotizacion) => c.tipo === 'cotizacion'
+        );
+        console.log("RESPUESTA API");
+        console.table(
+          res.data.map(c => ({
+            id: c._id,
+            empresa: c.empresa,
+            cliente: c.cliente?.nombre,
+            numero: c.numero
+          }))
         );
         setCotizaciones(soloCotizaciones);
       } catch (err) {
@@ -103,7 +134,7 @@ export default function VerCotizaciones() {
       const nuevaNota = res.data;
 
       const pdfBlob = generarGuiaPDF(
-        nuevaNota.cliente,
+        nuevaNota.cliente?.nombre || "",
         nuevaNota.productos,
         {
           tipo: 'nota',
@@ -233,7 +264,7 @@ export default function VerCotizaciones() {
 
                 {/* CLIENTE */}
                 <td className="px-4 py-3">
-                  {cot.cliente}
+                  {cot.cliente?.nombre || "Sin cliente"}
                 </td>
 
                 {/* DIRECCION */}

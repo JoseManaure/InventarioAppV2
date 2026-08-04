@@ -1,61 +1,90 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const DTEItemSchema = new mongoose.Schema({
-    codigo: String,
-    nombre: String,
-    cantidad: Number,
-    precio: Number,
-    subtotal: Number
-});
 
-const DTESchema = new mongoose.Schema({
-    tipo: {
-        type: Number,
+const dteSchema = new mongoose.Schema({
+
+    empresa: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Empresa",
         required: true
-        // 39 boleta
-        // 33 factura
-        // 52 guia
     },
+
+    tipoDocumento: {
+        type: String,
+        enum: [
+            "boleta",
+            "factura",
+            "guia"
+        ],
+        required: true
+    },
+
 
     folio: {
-        type: Number
+        type: Number,
+        default: null
     },
+
 
     estado: {
         type: String,
         enum: [
-            'pendiente',
-            'emitido',
-            'rechazado'
+            "reservado",
+            "generado",
+            "enviado",
+            "aceptado",
+            "rechazado",
+            "anulado"
         ],
-        default: 'pendiente'
+        default: "reservado"
+    },
+    respuestaSII: {
+        trackId: String,
+        estado: String,
+        fechaEnvio: Date,
+        mensaje: String
     },
 
     cliente: {
-        type: String,
-        required: true
+        nombre: String,
+        rut: String,
+        direccion: String
     },
 
-    rutCliente: String,
 
-    direccion: String,
+    productos: [
+        {
+            nombre: String,
+            cantidad: Number,
+            precio: Number
+        }
+    ],
 
-    productos: [DTEItemSchema],
 
-    total: Number,
+    total: {
+        type: Number,
+        default: 0
+    },
 
-    folioVisible: String,
 
-    xml: String,
+    xml: {
+        type: String,
+        default: null
+    },
 
-    pdfUrl: String,
 
-    respuestaSII: Object,
+    respuestaSII: {
+        type: Object,
+        default: null
+    }
 
-    trackId: String
 
 }, {
     timestamps: true
 });
 
-module.exports = mongoose.model('DTE', DTESchema);
+
+module.exports = mongoose.model(
+    "DTE",
+    dteSchema
+);

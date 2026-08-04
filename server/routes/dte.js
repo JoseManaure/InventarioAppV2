@@ -1,60 +1,88 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-const DTE = require('../models/DTE');
+const verifyToken = require("../middleware/verifyToken");
+
 const {
-    obtenerNuevoCorrelativoSeguro
-} = require('../utils/correlativo');
-router.post('/emitir', async (req, res) => {
+    emitirDTE
+} = require("../sii_v2/servicios/dteService");
 
-    try {
+router.post(
+    "/emitir",
+    verifyToken,
+    async (req, res) => {
 
-        const {
-            cliente,
-            direccion,
-            productos,
-            total
-        } = req.body;
+        try {
 
-        const nuevoDTE = await DTE.create({
+            const dte = await emitirDTE({
 
-            tipo: 39,
-            folioVisible,
-            folio,
+                empresa: req.user.empresa,
 
-            estado: 'emitido',
+                usuario: req.user.id,
 
-            cliente,
-            direccion,
-            productos,
-            total
+                tipoDTE: req.body.tipoDTE,
 
-        });
-        const folio =
-            await obtenerNuevoCorrelativoSeguro('boleta');
-        const folioVisible =
-            `BOL-${String(folio).padStart(6, '0')}`;
-        const pdf =
-            await generarPDFBoleta(nuevoDTE);
+                cliente: req.body.cliente,
 
-        nuevoDTE.pdfUrl = pdf.url;
+                rut: req.body.rut,
 
-        await nuevoDTE.save();
-        res.json({
-            ok: true,
-            dte: nuevoDTE
-        });
+                productos: req.body.productos,
 
-    } catch (error) {
+                total: req.body.total
 
-        console.error(error);
+            });
 
-        res.status(500).json({
-            ok: false,
-            error: 'Error generando DTE'
-        });
+            res.json({
+
+                ok: true,
+
+                dte
+
+            });
+
+        } catch (error) {
+
+            console.error(error);
+
+            res.status(500).json({
+
+                ok: false,
+
+                error: error.message
+
+            });
+
+        }
+
     }
+);
 
-});
+router.post(
+    "/enviar/:id",
+    verifyToken,
+    async (req, res) => {
+
+        try {
+
+            const resultado =
+                await enviarAlSII(req.params.id);
+
+
+            res.json({
+                ok: true,
+                resultado
+            });
+
+
+        } catch (error) {
+
+            res.status(500).json({
+                ok: false,
+                error: error.message
+            });
+
+        }
+
+    });
 
 module.exports = router;

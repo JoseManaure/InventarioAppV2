@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope
+xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+
+    <soapenv:Body>
+
+        <getToken>
+
+            <pszXml>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;getToken Id="_0"&gt;
+    &lt;item&gt;
+        &lt;Semilla&gt;165190405944&lt;/Semilla&gt;
+    &lt;/item&gt;
+&lt;Signature xmlns="http://www.w3.org/2000/09/xmldsig#"&gt;&lt;SignedInfo&gt;&lt;CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/&gt;&lt;SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/&gt;&lt;Reference URI="#_0"&gt;&lt;Transforms&gt;&lt;Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/&gt;&lt;/Transforms&gt;&lt;DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/&gt;&lt;DigestValue&gt;6H0W7wiePjFiXGgFpcTLsTXHeXA=&lt;/DigestValue&gt;&lt;/Reference&gt;&lt;/SignedInfo&gt;&lt;SignatureValue&gt;lx6QTFsI92n7aNfol2lkhYDu6XNBhaAwja1cZg0aLoeLYx8FFgIroigJeFp2R6lc+iczGuamEM4KM6Z6ImFhKo0tMPY5ycT1+szG8gNgf/mAPG6WERvPqQ8LAhQzhsI7N5fss5ZfZRj8wZu5xL0Ju1J4sgD+iKnLqHpm/Y7g6XuC9QG1KB/o0HKZ8ImjVGvi3qfqwxMH8rX64XfvO5g0F8d+YXqfGm0sA72PXLcYHcg3E05hKosR/YPgIJ4GdBcjdAqec19fwKFVXWev7NRZH/KNLTWFeKGXCjPzkqMq/bOdVFTLLihSJy+REKSlGU/b+V0vDvOo5gycKTG2oFUNQQ==&lt;/SignatureValue&gt;&lt;KeyInfo&gt;
+    &lt;X509Data&gt;
+    &lt;X509Certificate&gt;MIID0zCCArugAwIBAgIUH59Szn08k/ABotyRjhPTospLDPAwDQYJKoZIhvcNAQELBQAweTELMAkGA1UEBhMCQ0wxFzAVBgNVBAgMDkFyaWRvcyBNTUQgU1BBMRcwFQYDVQQKDA5Bcmlkb3MgTU1EIFNQQTETMBEGA1UEAwwKQXJpZG9zIE1NRDEjMCEGCSqGSIb3DQEJARYUam1hbmF1cmU4N0BnbWFpbC5jb20wHhcNMjYwNzE5MDEyNDI1WhcNMjcwNzE5MDEyNDI1WjB5MQswCQYDVQQGEwJDTDEXMBUGA1UECAwOQXJpZG9zIE1NRCBTUEExFzAVBgNVBAoMDkFyaWRvcyBNTUQgU1BBMRMwEQYDVQQDDApBcmlkb3MgTU1EMSMwIQYJKoZIhvcNAQkBFhRqbWFuYXVyZTg3QGdtYWlsLmNvbTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMQBOXNlObEqO+09gjpOgq8tyIEKPd44EFYhAAySdnQnqXjG4cT10Vz0SiF/YHKGAhhC0Ls2n6WdkIUDTjcYL0xQlpaAcqengaBW3WA2Z64Xm96FqyI8o0vkaZWfzTOW1jhG1VGWIVCm/Lh1wsSP6R7EUN0EfFRvrbWD570J+PdE5zHIRd3ROEgHNlwz64REP0C/3kFt6h9KWPjWpw9kEjh5+WbxgC8gpnzxe28k4JTjeSYoQxMt+S43mKA/MSIKMcBNZNxOiGsZ0rWi7d8jRkSMbUXmSVeKINnDXFnFyXs+v5YGm/KdXrch6th7e6dKk6jQxkUTVEToBSrfqVfzAV0CAwEAAaNTMFEwHQYDVR0OBBYEFNPQHtV3falGgTWHtTt5BBFBhaEpMB8GA1UdIwQYMBaAFNPQHtV3falGgTWHtTt5BBFBhaEpMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAH2EcrJjr2uhO0YGb9YuDpOzQmu7XE06fnK0kI1iuf/+q1f/Fw15UDtDvJI1CXRGBkq4JY2mUzhvZGDnDy3y6UoDATwMCr6mb8dZ6eLw/D49utjdx/0+z8V/QbxgYXSmRGS1IBERgtWFT2XFYv7clue/+424WJA5i/yZ9VuTDkDajsLnqWwyugrYInJtfdkVmx38bw5t2L1xa0pXbo4NP1qZ6WK6M69I+LcMz8SNNmseg2qKhjzCYM+C9MhT09LjWDQ5GH/m5wfyqx9rvf0le2vyxi0gPwII2n+mHGPkJ2XZUvjpSW726LRu26Cdq0cV5+zKaEo1d8aNfnkKQ00rOpI=&lt;/X509Certificate&gt;
+    &lt;/X509Data&gt;&lt;/KeyInfo&gt;&lt;/Signature&gt;&lt;/getToken&gt;
+            
+
+            </pszXml>
+
+        </getToken>
+
+    </soapenv:Body>
+
+</soapenv:Envelope>

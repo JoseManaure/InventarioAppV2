@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<DTE version="1.0">
+  <Documento ID="F73T39">
+    <Encabezado>
+      <IdDoc>
+        <TipoDTE>39</TipoDTE>
+        <Folio>73</Folio>
+        <FchEmis>2026-07-22</FchEmis>
+      </IdDoc>
+      <Emisor>
+        <RUTEmisor>5586794-1</RUTEmisor>
+        <RznSoc>Aridos MMD SPA</RznSoc>
+        <GiroEmis>servicios y venta de aridos</GiroEmis>
+        <DirOrigen>balmaceda 01091,penaflor</DirOrigen>
+        <CmnaOrigen>penaflor</CmnaOrigen>
+        <CiudadOrigen>santiago</CiudadOrigen>
+      </Emisor>
+      <Receptor>
+        <RUTRecep>11111111-1</RUTRecep>
+        <RznSocRecep>Cliente Prueba</RznSocRecep>
+      </Receptor>
+      <Totales>
+        <MntNeto>20000</MntNeto>
+        <IVA>3800</IVA>
+        <MntTotal>23800</MntTotal>
+      </Totales>
+    </Encabezado>
+    <Detalle>
+      <NroLinDet>1</NroLinDet>
+      <NmbItem>Arena</NmbItem>
+      <QtyItem>2</QtyItem>
+      <PrcItem>10000</PrcItem>
+      <MontoItem>20000</MontoItem>
+    </Detalle>
+  
+<TED version="1.0">
+    <DD>
+        <RE>5586794-1</RE>
+        <TD>39</TD>
+        <F>73</F>
+        <FE>2026-07-22</FE>
+        <RR>11111111-1</RR>
+        <RSR>Cliente Prueba</RSR>
+        <MNT>23800</MNT>
+        <IT1>Arena</IT1>
+    </DD>
+
+    <FRMT algoritmo="SHA1withRSA">
+        e6/3F2Ac5xGcW7SsCJWRQjG1eSo=
+    </FRMT>
+</TED>
+
+</Documento>
+</DTE>
