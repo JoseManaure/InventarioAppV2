@@ -28,7 +28,7 @@ const allowedOrigins = [
   "http://127.0.0.1:8000", // ← AGREGAR
   "http://localhost:8000", // ← recomendable también
   "http://127.0.0.1:8001",
-
+  "https://inventario-app-v2-rouge.vercel.app",
   "https://inventario-app-woad.vercel.app",
   "https://inventario-ncuxjknoc-joses-projects-e0239e45.vercel.app",
   "https://inventario-dsg3ykta7-joses-projects-e0239e45.vercel.app"
